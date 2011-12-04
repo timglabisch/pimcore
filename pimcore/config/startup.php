@@ -15,6 +15,12 @@
 
 error_reporting(E_ALL ^ E_NOTICE);
 
+// configure the current ENV
+if(!isset($_ENV['PIMCORE_ENV']))
+    if (!defined("PIMCORE_ENV")) define("PIMCORE_ENV", '');
+else
+    if (!defined("PIMCORE_ENV")) define("PIMCORE_ENV", $_ENV['PIMCORE_ENV']);
+
 // configure some constants needed by pimcore
 $pimcoreDocumentRoot = realpath(dirname(__FILE__) . '/../..'); 
 
@@ -26,7 +32,6 @@ if (!defined("PIMCORE_PLUGINS_PATH"))  define("PIMCORE_PLUGINS_PATH", PIMCORE_DO
 // website module specific
 if (!defined("PIMCORE_WEBSITE_PATH"))  define("PIMCORE_WEBSITE_PATH", PIMCORE_DOCUMENT_ROOT . "/" . PIMCORE_FRONTEND_MODULE);
 if (!defined("PIMCORE_CONFIGURATION_DIRECTORY"))  define("PIMCORE_CONFIGURATION_DIRECTORY", PIMCORE_WEBSITE_PATH . "/var/config");
-if (!defined("PIMCORE_CONFIGURATION_SYSTEM"))  define("PIMCORE_CONFIGURATION_SYSTEM", PIMCORE_CONFIGURATION_DIRECTORY . "/system.xml");
 if (!defined("PIMCORE_CONFIGURATION_PLUGINS"))  define("PIMCORE_CONFIGURATION_PLUGINS", PIMCORE_CONFIGURATION_DIRECTORY . "/plugin.xml");
 if (!defined("PIMCORE_ASSET_DIRECTORY"))  define("PIMCORE_ASSET_DIRECTORY", PIMCORE_WEBSITE_PATH . "/var/assets");
 if (!defined("PIMCORE_VERSION_DIRECTORY"))  define("PIMCORE_VERSION_DIRECTORY", PIMCORE_WEBSITE_PATH . "/var/versions");
@@ -39,6 +44,11 @@ if (!defined("PIMCORE_CLASS_DIRECTORY"))  define("PIMCORE_CLASS_DIRECTORY", PIMC
 if (!defined("PIMCORE_BACKUP_DIRECTORY"))  define("PIMCORE_BACKUP_DIRECTORY", PIMCORE_WEBSITE_PATH . "/var/backup");
 if (!defined("PIMCORE_RECYCLEBIN_DIRECTORY"))  define("PIMCORE_RECYCLEBIN_DIRECTORY", PIMCORE_WEBSITE_PATH . "/var/recyclebin");
 if (!defined("PIMCORE_SYSTEM_TEMP_DIRECTORY"))  define("PIMCORE_SYSTEM_TEMP_DIRECTORY", PIMCORE_WEBSITE_PATH . "/var/system");
+
+if(PIMCORE_ENV == "")
+    if (!defined("PIMCORE_CONFIGURATION_SYSTEM"))  define("PIMCORE_CONFIGURATION_SYSTEM", PIMCORE_CONFIGURATION_DIRECTORY . "/system.xml");
+else
+    if (!defined("PIMCORE_CONFIGURATION_SYSTEM"))  define("PIMCORE_CONFIGURATION_SYSTEM", PIMCORE_CONFIGURATION_DIRECTORY . "/system_".PIMCORE_ENV.".xml");
 
 // setup include pathes
 $includePaths = array(

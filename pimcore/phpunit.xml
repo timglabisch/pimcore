@@ -1,0 +1,10 @@
+<phpunit backupGlobals="false" backupStaticAttributes="false" bootstrap="../plugins/Pimunit/bootstrap.php" colors="false" syntaxCheck="true" strict="false" verbose="false">
+	<testsuites>
+		<testsuite name="Pimunit">
+			<directory>tests/tests</directory>
+		</testsuite>
+	</testsuites>
+     <php>
+        <env name="PIMCORE_ENV" value="foo"/>
+    </php>
+</phpunit>
