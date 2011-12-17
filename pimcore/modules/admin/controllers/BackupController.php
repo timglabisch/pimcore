@@ -15,40 +15,53 @@
 
 class Admin_BackupController extends Pimcore_Controller_Action_Admin {
 
+    /** @var \de\any\iDi !inject */
+    public $di;
 
+    /** @var \Zend_Session_Namespace */
+    public $session = null;
+    
     public function init() {
+        
         parent::init();
+    }
 
-        $this->session = new Zend_Session_Namespace("pimcore_backup");
+    /**
+     * @return \Zend_Session_Namespace
+     */
+    public function getSession() {
+
+        if($this->session === null)
+            $this->session = new Zend_Session_Namespace("pimcore_backup");
+
+        return $this->session;
+    }
+
+    /**
+     * @return \Pimcore_Backup
+     */
+    public function getBackupSession() {
+
+        if(!isset($this->getSession()->backup) || !$this->session->backup) {
+            $this->getSession()->backup = $this->di->get('\Pimcore_Backup');
+            $this->getSession()->backup->setBackupFile(PIMCORE_BACKUP_DIRECTORY . "/backup_" . date("m-d-Y_H-i") . ".tar");
+        }
+
+        return $this->session->backup;
     }
 
     public function initAction() {
-
-        $backup = new Pimcore_Backup(PIMCORE_BACKUP_DIRECTORY . "/backup_" . date("m-d-Y_H-i") . ".tar");
-        $initInfo = $backup->init();
-        
-        $this->session->backup = $backup;        
-
-        $this->_helper->json($initInfo);
+        $this->_helper->json($this->getBackupSession()->init());
     }
 
     public function filesAction() {
 
-        $backup = $this->session->backup;
-        $return = $backup->fileStep($this->_getParam("step"));              
-        $this->session->backup = $backup;
-                                
-        $this->_helper->json($return);
+        $this->_helper->json($this->getBackupSession()->fileStep($this->_getParam("step")));
     }
 
     public function mysqlTablesAction() {
 
-        $backup = $this->session->backup;
-        $return = $backup->mysqlTables();              
-        $this->session->backup = $backup;
-                                
-        $this->_helper->json($return);
-        
+        $this->_helper->json($this->getBackupSession()->mysqlTables());
     }
 
     public function mysqlAction() {
@@ -56,38 +69,24 @@ class Admin_BackupController extends Pimcore_Controller_Action_Admin {
         $name = $this->_getParam("name");
         $type = $this->_getParam("type");
         
-        $backup = $this->session->backup;
-        $return = $backup->mysqlData($name, $type);              
-        $this->session->backup = $backup;
-                                
-        $this->_helper->json($return);
+        $this->_helper->json($this->getBackupSession()->mysqlData($name, $type));
     }
 
     public function mysqlCompleteAction() {
 
-        $backup = $this->session->backup;
-        $return = $backup->mysqlComplete();              
-        $this->session->backup = $backup;
-                                
-        $this->_helper->json($return);
+        $this->_helper->json($this->getBackupSession()->mysqlComplete());
     }
 
     public function completeAction() {
-
-        $backup = $this->session->backup;
-        $return = $backup->complete();              
-        $this->session->backup = $backup;
-                                
-        $this->_helper->json($return);
+        
+        $this->_helper->json($this->getBackupSession()->complete());
     }
 
     public function downloadAction() {
-        
-        $backup = $this->session->backup;
-        
+
         header("Content-Type: application/tar");
-        header('Content-Disposition: attachment; filename="' . basename($backup->getBackupFile()) . '"');
-        readfile($backup->getBackupFile());
+        header('Content-Disposition: attachment; filename="' . basename($this->getBackupSession()->getBackupFile()) . '"');
+        readfile($this->getBackupSession()->getBackupFile());
         
         exit;
     }
