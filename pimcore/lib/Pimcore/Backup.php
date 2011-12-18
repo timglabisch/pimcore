@@ -15,32 +15,59 @@
 
 class Pimcore_Backup {
 
-    public $additionalExcludePatterns = array();
+    private $resource;
+    private $logger;
 
+    public $additionalExcludePatterns = array();
     public $filesToBackup;
     public $fileAmount;
     public $backupFile;
-    
-    public function __construct ($backupFile) {
-        $this->backupFile = $backupFile;
+
+    /**
+     * @inject
+     * */
+    public function setResource(\Pimcore_Resource_Shared $resource) {
+        $this->resource = $resource;
     }
-    
+
+    /**
+     * @return \Pimcore_Resource_Shared
+     */
+    public function getResource() {
+        return $this->resource;
+    }
+
+    /**
+     * @inject
+     */
+    public function setLogger(\Logger_Shared $logger) {
+        $this->logger = $logger;
+    }
+
+    public function getLogger() {
+        return $this->logger;
+    }
+
     public function getFilesToBackup () {
         return $this->filesToBackup;
     }
-    
+
     protected function setFilesToBackup ($files) {
         $this->filesToBackup = $files;
     }
-    
+
     public function getFileAmount () {
         return $this->fileAmount;
     }
-    
+
     protected function setFileAmount ($fileAmount) {
         $this->fileAmount = $fileAmount;
     }
-    
+
+    public function setBackupFile ($backupFile) {
+        $this->backupFile = $backupFile;
+    }
+
     public function getBackupFile () {
         return $this->backupFile;
     }
@@ -56,7 +83,7 @@ class Pimcore_Backup {
     protected function getFormattedFilesize () {
         return formatBytes(filesize($this->getBackupFile()));
     }
-    
+
     protected function getArchive () {
         $obj = new Archive_Tar($this->getBackupFile());
 
@@ -71,7 +98,7 @@ class Pimcore_Backup {
 
         return $obj;
     }
-    
+
     public function init () {
 
         // create backup directory if not exists
@@ -82,7 +109,7 @@ class Pimcore_Backup {
             }
         }
 
-        // config 
+        // config
         $dirsToBackup = array(
             "pimcore",
             PIMCORE_FRONTEND_MODULE,
@@ -91,7 +118,7 @@ class Pimcore_Backup {
 
         $errors = array();
         $this->setFileAmount(0);
-        
+
 
         // cleanup old backups
         if (is_file(PIMCORE_SYSTEM_TEMP_DIRECTORY . "/backup-dump.sql")) {
@@ -102,7 +129,7 @@ class Pimcore_Backup {
         $steps = array();
 
         // get available tables
-        $db = Pimcore_Resource::get();
+        $db = $this->getResource()->get();
         $tables = $db->fetchAll("SHOW FULL TABLES");
 
 
@@ -204,9 +231,9 @@ class Pimcore_Backup {
             "errors" => $errors
         );
     }
-    
+
     public function fileStep ($step) {
-        
+
         $filesContainer = $this->getFilesToBackup();
         $files = $filesContainer[$step];
 
@@ -240,11 +267,11 @@ class Pimcore_Backup {
                         $this->getArchive()->addString($relPath, file_get_contents($file));
                     }
                     else {
-                        Logger::info("Backup: Excluded: " . $file);
+                        $this->getLogger()->info("Backup: Excluded: " . $file);
                     }
                 }
                 else {
-                    Logger::err("Backup: Can't read file: " . $file);
+                    $this->getLogger()->err("Backup: Can't read file: " . $file);
                 }
             }
         }
@@ -257,9 +284,9 @@ class Pimcore_Backup {
             "fileAmount" => $this->getFileAmount()
         );
     }
-    
+
     public function mysqlTables () {
-        $db = Pimcore_Resource::get();
+        $db = $this->getResource()->get();
 
         $tables = $db->fetchAll("SHOW FULL TABLES");
 
@@ -296,9 +323,9 @@ class Pimcore_Backup {
             "success" => true
         );
     }
-    
+
     public function mysqlData ($name, $type) {
-        $db = Pimcore_Resource::reset();
+        $db = $this->getResource()->reset();
 
         $dumpData = "\n\n";
 
@@ -338,7 +365,7 @@ class Pimcore_Backup {
             "success" => true
         );
     }
-    
+
     public function mysqlComplete() {
         $this->getArchive()->addString("dump.sql", file_get_contents(PIMCORE_SYSTEM_TEMP_DIRECTORY . "/backup-dump.sql"));
 
@@ -350,7 +377,7 @@ class Pimcore_Backup {
             "filesize" => $this->getFormattedFilesize()
         );
     }
-    
+
     public function complete () {
         $this->getArchive()->addString(PIMCORE_FRONTEND_MODULE . "/var/cache/.dummy", "dummy");
         $this->getArchive()->addString(PIMCORE_FRONTEND_MODULE . "/var/tmp/.dummy", "dummy");

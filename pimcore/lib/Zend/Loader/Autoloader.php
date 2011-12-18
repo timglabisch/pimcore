@@ -116,6 +116,7 @@ class Zend_Loader_Autoloader
         $self = self::getInstance();
 
         foreach ($self->getClassAutoloaders($class) as $autoloader) {
+
             if ($autoloader instanceof Zend_Loader_Autoloader_Interface) {
                 if ($autoloader->autoload($class)) {
                     return true;

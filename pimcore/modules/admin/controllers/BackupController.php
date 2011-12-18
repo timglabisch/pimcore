@@ -22,8 +22,9 @@ class Admin_BackupController extends Pimcore_Controller_Action_Admin {
     public $session = null;
     
     public function init() {
-        
+
         parent::init();
+        
     }
 
     /**
@@ -42,12 +43,13 @@ class Admin_BackupController extends Pimcore_Controller_Action_Admin {
      */
     public function getBackupSession() {
 
-        if(!isset($this->getSession()->backup) || !$this->session->backup) {
+        if(!isset($this->getSession()->backup) || !$this->getSession()->backup) {
+
             $this->getSession()->backup = $this->di->get('\Pimcore_Backup');
             $this->getSession()->backup->setBackupFile(PIMCORE_BACKUP_DIRECTORY . "/backup_" . date("m-d-Y_H-i") . ".tar");
         }
-
-        return $this->session->backup;
+        
+        return $this->getSession()->backup;
     }
 
     public function initAction() {
