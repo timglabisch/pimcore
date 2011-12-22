@@ -21,6 +21,9 @@ class Pimcore_Backup {
     /** @var \Pimcore_Env !inject */
     public $pimcoreEnv;
 
+    /** @var \Pimcore_Io !inject */
+    public $io;
+
     public $additionalExcludePatterns = array();
     public $filesToBackup;
     public $fileAmount;
@@ -47,6 +50,9 @@ class Pimcore_Backup {
         $this->logger = $logger;
     }
 
+    /**
+     * @return \Logger_Shared
+     */
     public function getLogger() {
         return $this->logger;
     }
@@ -105,8 +111,8 @@ class Pimcore_Backup {
     public function init () {
 
         // create backup directory if not exists
-        if (!is_dir($this->pimcoreEnv->getBackupDirectory())) {
-            if (!mkdir($this->pimcoreEnv->getBackupDirectory())) {
+        if (!$this->io->isDir($this->pimcoreEnv->getBackupDirectory())) {
+            if (!$this->io->mkdir($this->pimcoreEnv->getBackupDirectory())) {
                 $this->getLogger()->err("Directory " . $this->pimcoreEnv->getBackupDirectory() . " does not exists and cannot be created.");
                 exit;
             }
@@ -115,7 +121,7 @@ class Pimcore_Backup {
         // config
         $dirsToBackup = array(
             "pimcore",
-            PIMCORE_FRONTEND_MODULE,
+            $this->pimcoreEnv->getFrontendModule(),
             "plugins"
         );
 
@@ -175,15 +181,15 @@ class Pimcore_Backup {
         $currentFileSize = 0;
         $currentStepFiles = array();
 
-        $files = scandir($this->pimcoreEnv->getDocumentRoot());
+        $files = $this->io->scandir($this->pimcoreEnv->getDocumentRoot());
         foreach ($files as $file) {
             $dir = $this->pimcoreEnv->getDocumentRoot() . "/" . $file;
             if (is_dir($dir) && in_array($file, $dirsToBackup)) {
                 // check permissions
-                $filesIn = rscandir($dir . "/");
+                $filesIn = $this->io->rscandir($dir . "/");
 
                 foreach ($filesIn as $fileIn) {
-                    if (!is_readable($fileIn)) {
+                    if (!$this->io->isReadable($fileIn)) {
                         $errors[] = $fileIn . " is not readable.";
                     }
 
@@ -197,7 +203,7 @@ class Pimcore_Backup {
                         $currentStepFiles = array();
                     }
 
-                    $currentFileSize += filesize($fileIn);
+                    $currentFileSize += $this->io->filesize($fileIn);
                     $currentFileCount++;
                     $currentStepFiles[] = $fileIn;
                 }
@@ -255,7 +261,7 @@ class Pimcore_Backup {
 
         foreach ($files as $file) {
             if ($file) {
-                if (is_readable($file)) {
+                if ($this->io->isReadable($file)) {
 
                     $exclude = false;
                     $relPath = str_replace($this->pimcoreEnv->getDocumentRoot() . "/", "", $file);
