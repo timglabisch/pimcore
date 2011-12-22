@@ -18,6 +18,9 @@ class Pimcore_Backup {
     private $resource;
     private $logger;
 
+    /** @var \Pimcore_Env !inject */
+    public $pimcoreEnv;
+
     public $additionalExcludePatterns = array();
     public $filesToBackup;
     public $fileAmount;
@@ -25,7 +28,7 @@ class Pimcore_Backup {
 
     /**
      * @inject
-     * */
+     */
     public function setResource(\Pimcore_Resource_Shared $resource) {
         $this->resource = $resource;
     }
@@ -102,9 +105,9 @@ class Pimcore_Backup {
     public function init () {
 
         // create backup directory if not exists
-        if (!is_dir(PIMCORE_BACKUP_DIRECTORY)) {
-            if (!mkdir(PIMCORE_BACKUP_DIRECTORY)) {
-                Logger::err("Directory " . PIMCORE_BACKUP_DIRECTORY . " does not exists and cannot be created.");
+        if (!is_dir($this->pimcoreEnv->getBackupDirectory())) {
+            if (!mkdir($this->pimcoreEnv->getBackupDirectory())) {
+                $this->getLogger()->err("Directory " . $this->pimcoreEnv->getBackupDirectory() . " does not exists and cannot be created.");
                 exit;
             }
         }
@@ -121,8 +124,8 @@ class Pimcore_Backup {
 
 
         // cleanup old backups
-        if (is_file(PIMCORE_SYSTEM_TEMP_DIRECTORY . "/backup-dump.sql")) {
-            unlink(PIMCORE_SYSTEM_TEMP_DIRECTORY . "/backup-dump.sql");
+        if (is_file($this->pimcoreEnv->getSystemTempDirectory() . "/backup-dump.sql")) {
+            unlink($this->pimcoreEnv->getSystemTempDirectory() . "/backup-dump.sql");
         }
 
         // get steps
@@ -172,9 +175,9 @@ class Pimcore_Backup {
         $currentFileSize = 0;
         $currentStepFiles = array();
 
-        $files = scandir(PIMCORE_DOCUMENT_ROOT);
+        $files = scandir($this->pimcoreEnv->getDocumentRoot());
         foreach ($files as $file) {
-            $dir = PIMCORE_DOCUMENT_ROOT . "/" . $file;
+            $dir = $this->pimcoreEnv->getDocumentRoot() . "/" . $file;
             if (is_dir($dir) && in_array($file, $dirsToBackup)) {
                 // check permissions
                 $filesIn = rscandir($dir . "/");
@@ -238,12 +241,12 @@ class Pimcore_Backup {
         $files = $filesContainer[$step];
 
         $excludePatterns = array(
-            "/^" . PIMCORE_FRONTEND_MODULE . "\/var\/backup\/.*/",
-            "/^" . PIMCORE_FRONTEND_MODULE . "\/var\/cache\/.*/",
-            "/^" . PIMCORE_FRONTEND_MODULE . "\/var\/log\/.*/",
-            "/^" . PIMCORE_FRONTEND_MODULE . "\/var\/system\/.*/",
-            "/^" . PIMCORE_FRONTEND_MODULE . "\/var\/tmp\/.*/",
-            "/^" . PIMCORE_FRONTEND_MODULE . "\/var\/webdav\/.*/"
+            "/^" . $this->pimcoreEnv->getFrontendModule() . "\/var\/backup\/.*/",
+            "/^" . $this->pimcoreEnv->getFrontendModule() . "\/var\/cache\/.*/",
+            "/^" . $this->pimcoreEnv->getFrontendModule() . "\/var\/log\/.*/",
+            "/^" . $this->pimcoreEnv->getFrontendModule() . "\/var\/system\/.*/",
+            "/^" . $this->pimcoreEnv->getFrontendModule() . "\/var\/tmp\/.*/",
+            "/^" . $this->pimcoreEnv->getFrontendModule() . "\/var\/webdav\/.*/"
         );
 
         if(!empty($this->additionalExcludePatterns) && is_array($this->additionalExcludePatterns)) {
@@ -255,7 +258,7 @@ class Pimcore_Backup {
                 if (is_readable($file)) {
 
                     $exclude = false;
-                    $relPath = str_replace(PIMCORE_DOCUMENT_ROOT . "/", "", $file);
+                    $relPath = str_replace($this->pimcoreEnv->getDocumentRoot() . "/", "", $file);
 
                     foreach ($excludePatterns as $pattern) {
                         if (preg_match($pattern, $relPath)) {
@@ -315,7 +318,7 @@ class Pimcore_Backup {
         $dumpData .= "\n\n";
 
 
-        $h = fopen(PIMCORE_SYSTEM_TEMP_DIRECTORY . "/backup-dump.sql", "a+");
+        $h = fopen($this->pimcoreEnv->getSystemTempDirectory() . "/backup-dump.sql", "a+");
         fwrite($h, $dumpData);
         fclose($h);
 
@@ -357,7 +360,7 @@ class Pimcore_Backup {
 
         $dumpData .= "\n\n";
 
-        $h = fopen(PIMCORE_SYSTEM_TEMP_DIRECTORY . "/backup-dump.sql", "a+");
+        $h = fopen($this->pimcoreEnv->getSystemTempDirectory() . "/backup-dump.sql", "a+");
         fwrite($h, $dumpData);
         fclose($h);
 
@@ -367,10 +370,10 @@ class Pimcore_Backup {
     }
 
     public function mysqlComplete() {
-        $this->getArchive()->addString("dump.sql", file_get_contents(PIMCORE_SYSTEM_TEMP_DIRECTORY . "/backup-dump.sql"));
+        $this->getArchive()->addString("dump.sql", file_get_contents($this->pimcoreEnv->getSystemTempDirectory() . "/backup-dump.sql"));
 
         // cleanup
-        unlink(PIMCORE_SYSTEM_TEMP_DIRECTORY . "/backup-dump.sql");
+        unlink($this->pimcoreEnv->getSystemTempDirectory() . "/backup-dump.sql");
 
         return array(
             "success" => true,
@@ -379,16 +382,16 @@ class Pimcore_Backup {
     }
 
     public function complete () {
-        $this->getArchive()->addString(PIMCORE_FRONTEND_MODULE . "/var/cache/.dummy", "dummy");
-        $this->getArchive()->addString(PIMCORE_FRONTEND_MODULE . "/var/tmp/.dummy", "dummy");
-        $this->getArchive()->addString(PIMCORE_FRONTEND_MODULE . "/var/log/debug.log", "dummy");
-        $this->getArchive()->addString("index.php", file_get_contents(PIMCORE_DOCUMENT_ROOT . "/index.php"));
-        $this->getArchive()->addString(".htaccess", file_get_contents(PIMCORE_DOCUMENT_ROOT . "/.htaccess"));
+        $this->getArchive()->addString($this->pimcoreEnv->getFrontendModule() . "/var/cache/.dummy", "dummy");
+        $this->getArchive()->addString($this->pimcoreEnv->getFrontendModule() . "/var/tmp/.dummy", "dummy");
+        $this->getArchive()->addString($this->pimcoreEnv->getFrontendModule() . "/var/log/debug.log", "dummy");
+        $this->getArchive()->addString("index.php", file_get_contents($this->pimcoreEnv->getDocumentRoot() . "/index.php"));
+        $this->getArchive()->addString(".htaccess", file_get_contents($this->pimcoreEnv->getDocumentRoot() . "/.htaccess"));
 
 
         return array(
             "success" => true,
-            "download" => str_replace(PIMCORE_DOCUMENT_ROOT, "", $this->getBackupFile()),
+            "download" => str_replace($this->pimcoreEnv->getDocumentRoot(), "", $this->getBackupFile()),
             "filesystem" => $this->getBackupFile()
         );
     }
