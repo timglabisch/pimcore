@@ -107,22 +107,10 @@ class Pimcore_Controller_Router_Route_Frontend extends Zend_Controller_Router_Ro
 
                 // check for a parent hardlink with childs
                 if(!$document instanceof Document) {
-                    $hardlinkParentDocument = $this->getNearestDocumentByPath($path);
-                    if($hardlinkParentDocument instanceof Document_Hardlink) {
-                        if($hardlinkParentDocument->getChildsFromSource() && $hardlinkParentDocument->getSourceDocument()) {
-                            $hardlinkRealPath = preg_replace("@^" . preg_quote($hardlinkParentDocument->getFullpath()) . "@", $hardlinkParentDocument->getSourceDocument()->getFullpath(), $path);
-                            $hardLinkedDocument = Document::getByPath($hardlinkRealPath);
-                            if($hardLinkedDocument instanceof Document) {
-                                $hardLinkedDocument = Document_Hardlink_Wrapper::wrap($hardLinkedDocument);
-                                $hardLinkedDocument->setHardLinkSource($hardlinkParentDocument);
-
-                                $_path = $path != "/" ? $_path = dirname($path) : $path;
-                                $_path = str_replace("\\", "/", $_path); // windows patch
-                                $_path .= $_path != "/" ? "/" : "";
-
-                                $hardLinkedDocument->setPath($_path);
-                                $document = $hardLinkedDocument;
-                            }
+                    $hardlinkedParentDocument = $this->getNearestDocumentByPath($path, true);
+                    if($hardlinkedParentDocument instanceof Document_Hardlink) {
+                        if($hardLinkedDocument = Document_Hardlink_Service::getChildByPath($hardlinkedParentDocument, $path)) {
+                            $document = $hardLinkedDocument;
                         }
                     }
                 }
@@ -130,12 +118,11 @@ class Pimcore_Controller_Router_Route_Frontend extends Zend_Controller_Router_Ro
                 // check for direct hardlink
                 if($document instanceof Document_Hardlink) {
                     $hardlinkParentDocument = $document;
-                    $document = Document_Hardlink_Wrapper::wrap($hardlinkParentDocument);
-                    $document->setHardLinkSource($hardlinkParentDocument);
+                    $document = Document_Hardlink_Service::wrap($hardlinkParentDocument);
                 }
 
                 if ($document instanceof Document) {
-                    if ($document->getType() == "page" || $document->getType() == "snippet") {
+                    if (in_array($document->getType(), array("page","snippet","email"))) {
 
                         if (!empty($params["pimcore_version"]) || !empty($params["pimcore_preview"]) || !empty($params["pimcore_admin"]) || !empty($params["pimcore_editmode"]) || $document->isPublished()) {
                             $params["document"] = $document;
@@ -145,6 +132,9 @@ class Pimcore_Controller_Router_Route_Frontend extends Zend_Controller_Router_Ro
                             }
                             if ($action = $document->getAction()) {
                                 $params["action"] = $action;
+                            }
+                            if ($module = $document->getModule()) {
+                                $params["module"] = $module;
                             }
 
                             // check for a trailing slash in path, if exists, redirect to this page without the slash
@@ -301,32 +291,46 @@ class Pimcore_Controller_Router_Route_Frontend extends Zend_Controller_Router_Ro
      * @param string $path
      * @return void
      */
-    protected function getNearestDocumentByPath ($path) {
+    protected function getNearestDocumentByPath ($path, $ignoreHardlinks = false) {
 
         if($this->nearestDocumentByPath instanceof Document) {
-            return $this->nearestDocumentByPath;
-        }
+            $document = $this->nearestDocumentByPath;
+        } else {
 
-        $pathes = array();
-        
-        $pathes[] = "/";
-        $pathParts = explode("/", $path);
-        $tmpPathes = array();
-        foreach ($pathParts as $pathPart) {
-            $tmpPathes[] = $pathPart;
-            $t = implode("/", $tmpPathes);
-            if (!empty($t)) {
-                $pathes[] = $t;
+            $pathes = array();
+
+            $pathes[] = "/";
+            $pathParts = explode("/", $path);
+            $tmpPathes = array();
+            foreach ($pathParts as $pathPart) {
+                $tmpPathes[] = $pathPart;
+                $t = implode("/", $tmpPathes);
+                if (!empty($t)) {
+                    $pathes[] = $t;
+                }
+            }
+
+            $pathes = array_reverse($pathes);
+
+            foreach ($pathes as $p) {
+                if ($document = Document::getByPath($p)) {
+                    $this->nearestDocumentByPath = $document;
+                    break;
+                }
             }
         }
 
-        $pathes = array_reverse($pathes);
-
-        foreach ($pathes as $p) {
-            if ($document = Document::getByPath($p)) {
-                $this->nearestDocumentByPath = $document;
-                return $document;
+        if($document) {
+            if(!$ignoreHardlinks) {
+                if($document instanceof Document_Hardlink) {
+                    if($hardLinkedDocument = Document_Hardlink_Service::getChildByPath($document, $path)) {
+                        $document = $hardLinkedDocument;
+                    } else {
+                        $document = Document_Hardlink_Service::wrap($document);
+                    }
+                }
             }
+            return $document;
         }
 
         return null;

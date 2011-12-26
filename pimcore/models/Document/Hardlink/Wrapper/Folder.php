@@ -45,10 +45,8 @@ class Document_Hardlink_Wrapper_Folder extends Document_Folder implements Docume
             $hardLinkSourceProperties = $this->getHardLinkSource()->getProperties();
             foreach ($hardLinkSourceProperties as $key => $prop) {
                 $prop = clone $prop;
-                if($prop->getInheritable()) {
-                    $prop->setInherited(true);
-                    $hardLinkProperties[$key] = $prop;
-                }
+                $prop->setInherited(true);
+                $hardLinkProperties[$key] = $prop;
             }
 
 
@@ -68,7 +66,7 @@ class Document_Hardlink_Wrapper_Folder extends Document_Folder implements Docume
 
             if($hardLink->getChildsFromSource() && $hardLink->getSourceDocument() && !Pimcore::inAdmin()) {
                 foreach($childs as &$c) {
-                    $c = Document_Hardlink_Wrapper::wrap($c);
+                    $c = Document_Hardlink_Service::wrap($c);
                     $c->setHardLinkSource($hardLink);
                     $c->setPath(preg_replace("@^" . preg_quote($hardLink->getSourceDocument()->getFullpath()) . "@", $hardLink->getFullpath(), $c->getPath()));
                 }

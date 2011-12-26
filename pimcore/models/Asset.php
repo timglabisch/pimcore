@@ -201,13 +201,7 @@ class Asset extends Pimcore_Model_Abstract implements Element_Interface {
 
     public static function getByPath($path) {
 
-        // remove trailing slash
-        if($path != "/") {
-            $path = rtrim($path,"/ ");
-        }
-
-        // correct wrong path (root-node problem)
-        $path = str_replace("//", "/", $path);
+        $path = Element_Service::correctPath($path);
 
         try {
             $asset = new Asset();
@@ -416,9 +410,11 @@ class Asset extends Pimcore_Model_Abstract implements Element_Interface {
 
         }
 
-        $duplicate = Asset::getByPath($this->getFullPath());
-        if ($duplicate instanceof Asset  and $duplicate->getId() != $this->getId()) {
-            throw new Exception("Duplicate full path [ " . $this->getFullPath() . " ] - cannot create asset");
+        if(Asset_Service::pathExists($this->getFullPath())) {
+            $duplicate = Asset::getByPath($this->getFullPath());
+            if ($duplicate instanceof Asset  and $duplicate->getId() != $this->getId()) {
+                throw new Exception("Duplicate full path [ " . $this->getFullPath() . " ] - cannot create asset");
+            }
         }
 
     }
@@ -432,15 +428,12 @@ class Asset extends Pimcore_Model_Abstract implements Element_Interface {
 
 
         if (!$this->getFilename() && $this->getId() != 1) {
-            $this->delete();
-            throw new Exception("Asset requires filename, asset with id " . $this->getId() . " deleted");
+            $this->setFilename("---no-valid-filename---" . $this->getId());
+            throw new Exception("Asset requires filename, generated filename automatically");
         }
 
         // set date
         $this->setModificationDate(time());
-
-        // save data
-        $conf = Pimcore_Config::getSystemConfig();
 
         // create foldertree
         $destinationPath = $this->getFileSystemPath();

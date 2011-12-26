@@ -15,24 +15,28 @@
 
 class Pimcore_Controller_Action extends Zend_Controller_Action {
 
+    /**
+     * Indicator if the custom view is already initialized or not
+     * this isn't necessary any more because this functionality has moved to Pimcore_Controller_Action_Helper_ViewRenderer
+     * @deprecated
+     * @var bool
+     */
+    protected static $_customViewInitialized = false;
+
     public function init() {
         parent::init();
 
-        // set contenttype
-        $this->getResponse()->setHeader("Content-Type", "text/html; charset=UTF-8", true);
+        $this->view->setRequest($this->getRequest());
 
         // init view | only once if there are called other actions
-        try {
-            if (!Zend_Registry::get("pimcore_custom_view")) {
-                $this->initCustomView();
-            }
-        }
-        catch (Exception $e) {
+        // this is just for compatibilty reasons see $this->initCustomView();
+        if (!self::$_customViewInitialized) {
             $this->initCustomView();
+            self::$_customViewInitialized = true;
         }
 
-        // add some parameters
-        $this->view->setRequest($this->getRequest());
+        // set contenttype
+        $this->getResponse()->setHeader("Content-Type", "text/html; charset=UTF-8", true);
     }
 
     protected function removeViewRenderer() {
@@ -46,7 +50,7 @@ class Pimcore_Controller_Action extends Zend_Controller_Action {
         Zend_Layout::startMvc();
         $layout = Zend_Layout::getMvcInstance();
 
-        $layout->setViewSuffix($this->getViewSuffix());
+        $layout->setViewSuffix(Pimcore_View::getViewScriptSuffix());
     }
 
     protected function disableLayout() {
@@ -85,47 +89,10 @@ class Pimcore_Controller_Action extends Zend_Controller_Action {
         }
     }
 
+    /**
+     * @deprecated
+     */
     protected function initCustomView() {
-
-        $viewHelper = Zend_Controller_Action_HelperBroker::getExistingHelper("ViewRenderer");
-
-        $view = new Pimcore_View();
-
-        // script pathes
-        foreach ($viewHelper->view->getScriptPaths() as $path) {
-            $view->addScriptPath($path);
-            $view->addScriptPath(str_replace(DIRECTORY_SEPARATOR . "scripts", DIRECTORY_SEPARATOR . "layouts", $path));
-        }
-
-        // view helper
-        foreach ($viewHelper->view->getHelperPaths() as $prefix => $path) { 
-            $view->addHelperPath($path, $prefix); 
-        }
-        $view->addHelperPath(PIMCORE_PATH . "/lib/Pimcore/View/Helper", "Pimcore_View_Helper_");
-
-        // add helper to controller
-        $viewHelper->setView($view);
-        $viewHelper->setViewSuffix($this->getViewSuffix());
-        Zend_Controller_Action_HelperBroker::addHelper($viewHelper);
-
-        $this->view = $view;
-
-        Zend_Registry::set("pimcore_custom_view", true);
-    }
-
-    protected function getViewSuffix () {
-
-        // default is php
-        $viewSuffix = "php";
-
-        // custom view suffixes are only available for the frontend module (website)
-        if($this->getRequest()->getModuleName() == PIMCORE_FRONTEND_MODULE) {
-            $customViewSuffix = Pimcore_Config::getSystemConfig()->general->viewSuffix;
-            if(!empty($customViewSuffix)) {
-                $viewSuffix = $customViewSuffix;
-            }
-        }
-
-        return $viewSuffix;
+        // just for compatibility
     }
 }
