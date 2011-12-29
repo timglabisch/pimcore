@@ -35,6 +35,7 @@ class Extensionmanager_ShareController extends Pimcore_Controller_Action_Admin {
         // plugins
         $pluginConfigs = Pimcore_ExtensionManager::getPluginConfigs();
 
+
         // get remote repo state of plugins
         $remoteConfig = array();
         foreach ($pluginConfigs as $config) {
@@ -56,7 +57,6 @@ class Extensionmanager_ShareController extends Pimcore_Controller_Action_Admin {
                 );
             }
         }
-
 
         $remoteConfig["token"] = Pimcore_Liveconnect::getToken();
         $rawData = Pimcore_Tool::getHttpData("http://extensions.pimcore.org/share/getExtensions.php", null, array("data" => base64_encode(serialize($remoteConfig))));

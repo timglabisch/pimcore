@@ -66,7 +66,7 @@ require_once "Zend/Loader/Autoloader.php";
 $autoloader = Zend_Loader_Autoloader::getInstance();
 $autoloader->registerNamespace('Pimcore');
 
-$autoloader->suppressNotFoundWarnings(true);
+$autoloader->suppressNotFoundWarnings(false);
 
 
 // do some general stuff

@@ -15,13 +15,7 @@
 
 class Admin_BackupController extends Pimcore_Controller_Action_Admin {
 
-    /** @var \de\any\iDi !inject */
-    public $di;
-
-    /** @var \Pimcore_Env !inject */
-    public $pimcoreEnv;
-
-    /** @var \Zend_Session_Namespace */
+      /** @var \Zend_Session_Namespace */
     public $session = null;
     
     public function init() {
@@ -41,14 +35,18 @@ class Admin_BackupController extends Pimcore_Controller_Action_Admin {
         return $this->session;
     }
 
+    public function getPimcoreEnv() {
+        return $this->di->get('pimcore_env');
+    }
+
     /**
      * @return \Pimcore_Backup
      */
     public function getBackupSession() {
 
         if(!isset($this->getSession()->backup) || !$this->getSession()->backup) {
-            $this->getSession()->backup = $this->di->get('\Pimcore_Backup');
-            $this->getSession()->backup->setBackupFile($this->pimcoreEnv->getBackupDirectory() . "/backup_" . date("m-d-Y_H-i") . ".tar");
+            $this->getSession()->backup = $this->di->get('pimcore_backup');
+            $this->getSession()->backup->setBackupFile($this->getPimcoreEnv()->getBackupDirectory() . "/backup_" . date("m-d-Y_H-i") . ".tar");
         }
         
         return $this->getSession()->backup;
