@@ -460,14 +460,16 @@ pimcore.layout.toolbar = Class.create({
             cls: "pimcore_main_menu",
             handler: this.logout
         });
-        
-        
+
+
         this.toolbar.add("-");
         
         this.toolbar.add(new Ext.Toolbar.Spacer({
             width: "150"
         }));
 
+
+        pimcore.globalmanager.get('event').fireEvent(pimcore.event.pimcoreLayoutToolbarRender, this.toolbar);
 
         return;
     },

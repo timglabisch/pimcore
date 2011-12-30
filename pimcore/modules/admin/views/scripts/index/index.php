@@ -156,6 +156,7 @@
             // runtime
             "pimcore/namespace.js",
             "pimcore/functions.js",
+            "pimcore/event.js",
             "pimcore/globalmanager.js",
             "pimcore/helpers.js",
 

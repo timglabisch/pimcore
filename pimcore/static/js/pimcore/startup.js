@@ -162,6 +162,9 @@ Ext.onReady(function() {
 
     pimcore.globalmanager.add("object_types_store", storeo);
 
+    // events
+    pimcore.globalmanager.add("event", new pimcore.event());
+
     // current user
     pimcore.globalmanager.add("user", new pimcore.user(pimcore.currentuser));
 
