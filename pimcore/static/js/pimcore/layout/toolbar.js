@@ -468,7 +468,6 @@ pimcore.layout.toolbar = Class.create({
             width: "150"
         }));
 
-
         pimcore.globalmanager.get('event').fireEvent(pimcore.event.pimcoreLayoutToolbarRender, this.toolbar);
 
         return;

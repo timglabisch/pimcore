@@ -168,6 +168,9 @@ Ext.onReady(function() {
     // current user
     pimcore.globalmanager.add("user", new pimcore.user(pimcore.currentuser));
 
+    // run initialite Event
+    pimcore.plugin.broker.fireEvent('PimcoreKernelReady');
+
     //pimcore languages
     var languageProxy = new Ext.data.HttpProxy({
         url: '/admin/settings/get-available-admin-languages'
