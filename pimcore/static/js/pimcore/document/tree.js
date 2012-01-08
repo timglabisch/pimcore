@@ -103,6 +103,7 @@ pimcore.document.tree = Class.create({
             this.tree.loadMask.enable();
         }.bind(this));
 
+        pimcore.globalmanager.get('event').fireEvent(pimcore.event.pimcoreDocumentTreeRender, this.tree);
 
         this.config.parentPanel.insert(this.config.index, this.tree);
         this.config.parentPanel.doLayout();
@@ -124,7 +125,6 @@ pimcore.document.tree = Class.create({
     },
 
     onDragEnd : function () {
-
         pimcore.helpers.dndUnmaskFrames();
     },
 
@@ -255,7 +255,7 @@ pimcore.document.tree = Class.create({
                 handler: this.attributes.reference.addDocument.bind(this, "snippet")
             });
 
-            // empty email  //ckogler
+            // empty email
             documentMenu.email.push({
                 text: "&gt; " + t("empty_email"),
                 iconCls: "pimcore_icon_email_add",
@@ -278,7 +278,6 @@ pimcore.document.tree = Class.create({
                 hideOnClick: false
             }));
 
-            //ckogler
             menu.add(new Ext.menu.Item({
                 text: t('add_email'),
                 iconCls: "pimcore_icon_email_add",
@@ -520,6 +519,8 @@ pimcore.document.tree = Class.create({
                 handler: this.reload.bind(this)
             }));
         }
+
+        pimcore.globalmanager.get('event').fireEvent(pimcore.event.pimcoreDocumentTreeContextMenuRender, menu, this.id);
 
         menu.show(this.ui.getAnchor());
     },

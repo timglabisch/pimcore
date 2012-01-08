@@ -14,12 +14,28 @@
 
 pimcore.registerNS("pimcore");
 
-pimcore.event = Ext.extend(Ext.util.Observable, {});
+pimcore.event = Ext.extend(Ext.util.Observable, {
+
+
+});
 
 // All Pimcore Core Events
 
 /**
- * @param \Ext.Toolbar
+ * @param Ext.Toolbar
  * @see layout/toolbar
  */
 pimcore.event.pimcoreLayoutToolbarRender = 'pimcoreLayoutToolbarRender';
+
+/**
+ * @param Ext.tree.TreePanel
+ * @see document/tree
+ */
+pimcore.event.pimcoreDocumentTreeRender = 'pimcoreDocumentTreeRender';
+
+/**
+ * @param Ext.menu.Menu
+ * @param int DocumentId
+ * @see document/tree
+ */
+pimcore.event.pimcoreDocumentTreeContextMenuRender = 'pimcoreDocumentTreeContextMenuRender';
