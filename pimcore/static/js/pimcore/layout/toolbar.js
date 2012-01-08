@@ -404,7 +404,7 @@ pimcore.layout.toolbar = Class.create({
             items: [
                 {
                     text: t("documentation"),
-                    itemId : "documentation",
+                    itemId: "documentation",
                     iconCls: "pimcore_icon_menu_documentation",
                     handler: function () {
                         window.open("http://www.pimcore.org/wiki/");
