@@ -16,7 +16,9 @@ pimcore.registerNS("pimcore.plugin.admin");
 pimcore.plugin.admin = Class.create({
 
     initialize: function() {
+        pimcore.plugin.broker.registerPlugin(this);
     },
+
     getClassName: function () {
     },
 
@@ -43,6 +45,12 @@ pimcore.plugin.admin = Class.create({
     postOpenDocument: function (document, type) {
     },
 
+    /* ready */
+    /* called if the pimcore kernel (events, user, ...) is ready */
+    PimcoreKernelReady : function() {
+    },
+
+    /* called if the UI is loaded */
     pimcoreReady: function (viewport) {
     }
 
