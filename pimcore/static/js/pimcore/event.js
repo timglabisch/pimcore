@@ -14,10 +14,70 @@
 
 pimcore.registerNS("pimcore");
 
-pimcore.event = Ext.extend(Ext.util.Observable, {
+pimcore.event = Ext.extend(Ext.util.Observable, {});
 
+/**
+ * All Events
+ */
 
-});
+pimcore.event.pimcore = {
+    'layout': {
+        'toolbar': {
+            /**
+             * @param Ext.Toolbar
+             * @see layout/toolbar
+             */
+            'render': 'pimcore.layout.toolbar.render'
+        }
+    },
+    'document': {
+        document: {
+            open : 'pimcore.document.document.open'
+        },
+        'tree': {
+            /**
+             * @param Ext.tree.TreePanel
+             * @see document/tree
+             */
+            'render': 'pimcore.document.tree.render',
+                'node': {
+                'contextMenu' : {
+                    /**
+                     * @param Ext.tree.TreePanel
+                     * @see document/tree
+                     */
+                    'render': 'pimcore.document.tree.node.contextMenu.render'
+                }
+            }
+        }
+    },
+    'asset': {
+        'tree': {
+            'node': {
+                'contextMenu' : {
+                    /**
+                     * @param Ext.tree.TreePanel
+                     * @see document/tree
+                     */
+                    'render': 'pimcore.asset.tree.node.contextMenu.render'
+                }
+            }
+        }
+    },
+    'object': {
+        'tree': {
+            'node': {
+                'contextMenu' : {
+                    /**
+                     * @param Ext.tree.TreePanel
+                     * @see document/tree
+                     */
+                    'render': 'pimcore.object.tree.node.contextMenu.render'
+                }
+            }
+        }
+    }
+}
 
 // All Pimcore Core Events
 
@@ -55,3 +115,6 @@ pimcore.event.pimcoreAssetTreeContextMenuRender = 'pimcoreAssetTreeContextMenuRe
  * @see object/tree
  */
 pimcore.event.pimcoreObjectTreeContextMenuRender = 'pimcoreObjectTreeContextMenuRender';
+
+
+pimcore.event.pimcoreDocumentPreOpen = "pimcoreDocumentPreOpen";

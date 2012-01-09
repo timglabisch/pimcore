@@ -469,7 +469,7 @@ pimcore.object.tree = Class.create({
             }));
         }
 
-        pimcore.globalmanager.get('event').fireEvent(pimcore.event.pimcoreObjectTreeContextMenuRender, menu, this.id);
+        pimcore.globalmanager.get('event').fireEvent(pimcore.event.pimcore.object.tree.node.contextMenu.render, menu, this.id);
 
         menu.show(this.ui.getAnchor());
     },

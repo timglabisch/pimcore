@@ -556,7 +556,7 @@ pimcore.document.tree = Class.create({
             }));
         }
 
-        pimcore.globalmanager.get('event').fireEvent(pimcore.event.pimcoreDocumentTreeContextMenuRender, menu, this.id);
+        pimcore.globalmanager.get('event').fireEvent(pimcore.event.pimcore.document.tree.node.contextMenu.render, menu, this.id);
 
         menu.show(this.ui.getAnchor());
     },
