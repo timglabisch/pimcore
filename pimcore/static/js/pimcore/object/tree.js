@@ -220,6 +220,7 @@ pimcore.object.tree = Class.create({
                 // for create new object
                 tmpMenuEntry = {
                     text: record.get("translatedText"),
+                    itemId: "importer_object_add",
                     iconCls: "pimcore_icon_object_add",
                     handler: this.ref.attributes.reference.addObject.bind(this.ref, record.get("id"), record.get("text"))
                 };
@@ -232,6 +233,7 @@ pimcore.object.tree = Class.create({
                 // for import objects
                 tmpMenuEntryImport = {
                     text: record.get("translatedText"),
+                    itemId: "importer_object_import",
                     iconCls: "pimcore_icon_object_import",
                     handler: this.ref.attributes.reference.importObjects.bind(this.ref, record.get("id"), record.get("text"))
                 };
@@ -247,7 +249,8 @@ pimcore.object.tree = Class.create({
 
         if (this.attributes.permissions.create) {
             menu.add(new Ext.menu.Item({
-                text: t('add_object'),
+                text: t("add_object"),
+                itemId: "add_object",
                 iconCls: "pimcore_icon_object_add",
                 hideOnClick: false,
                 menu: objectMenu.objects
@@ -256,7 +259,8 @@ pimcore.object.tree = Class.create({
 
             //if (this.attributes.type == "folder") {
                 menu.add(new Ext.menu.Item({
-                    text: t('add_folder'),
+                    text: t("add_folder"),
+                    itemId: "add_folder",
                     iconCls: "pimcore_icon_folder_add",
                     handler: this.attributes.reference.addFolder.bind(this)
                 }));
@@ -264,17 +268,20 @@ pimcore.object.tree = Class.create({
 
 
             menu.add(new Ext.menu.Item({
-                text: t('import'),
+                text: t("import"),
+                itemId: "import",
                 iconCls: "pimcore_icon_object_import",
                 hideOnClick: false,
                 menu: [{
-                    text: t('import_archive'),
+                    text: t("import_archive"),
+                    itemId: "import_archive",
                     iconCls: "pimcore_icon_archive_import",
                     handler: function(){
                         new pimcore.element.importer("object",this.id);
                     }.bind(this)
                 },{
-                    text: t('import_csv'),
+                    text: t("import_csv"),
+                    itemId: "import_csv",
                     hideOnClick: false,
                     iconCls: "pimcore_icon_object_csv_import",
                     menu:objectMenu.importer
@@ -282,7 +289,8 @@ pimcore.object.tree = Class.create({
             }));
 
             menu.add(new Ext.menu.Item({
-                text: t('export_archive'),
+                text: t("export_archive"),
+                itemId: "export_archive",
                 iconCls: "pimcore_icon_archive_export",
                 handler: function(){
                        new pimcore.element.exporter("object",this.id);
@@ -297,11 +305,13 @@ pimcore.object.tree = Class.create({
             if(this.attributes.reference.cacheObjectId && this.attributes.permissions.create) {
                 pasteMenu.push({
                     text: t("paste_recursive_as_childs"),
+                    itemId: "paste_recursive_as_childs",
                     iconCls: "pimcore_icon_paste",
                     handler: this.attributes.reference.pasteInfo.bind(this, "recursive")
                 });
                 pasteMenu.push({
                     text: t("paste_as_child"),
+                    itemId: "paste_as_child",
                     iconCls: "pimcore_icon_paste",
                     handler: this.attributes.reference.pasteInfo.bind(this, "child")
                 });
@@ -310,6 +320,7 @@ pimcore.object.tree = Class.create({
                 if (this.attributes.type != "folder") {
                     pasteMenu.push({
                         text: t("paste_contents"),
+                        itemId: "paste_contents",
                         iconCls: "pimcore_icon_paste",
                         handler: this.attributes.reference.pasteInfo.bind(this, "replace")
                     });
@@ -319,6 +330,7 @@ pimcore.object.tree = Class.create({
             if(this.attributes.reference.cutObject && this.attributes.permissions.create) {
                 pasteMenu.push({
                     text: t("paste_cut_element"),
+                    itemId: "paste_cut_element",
                     iconCls: "pimcore_icon_paste",
                     handler: function() {
                         this.attributes.reference.pasteCutObject(this.attributes.reference.cutObject, this.attributes.reference.cutParentNode, this, this.attributes.reference.tree);
@@ -330,7 +342,8 @@ pimcore.object.tree = Class.create({
 
             if (pasteMenu.length > 0) {
                 menu.add(new Ext.menu.Item({
-                    text: t('paste'),
+                    text: t("paste"),
+                    itemId: "paste",
                     iconCls: "pimcore_icon_paste",
                     hideOnClick: false,
                     menu: pasteMenu
@@ -340,7 +353,8 @@ pimcore.object.tree = Class.create({
 
         if (this.id != 1) {
             menu.add(new Ext.menu.Item({
-                text: t('copy'),
+                text: t("copy"),
+                itemId: "copy",
                 iconCls: "pimcore_icon_copy",
                 handler: this.attributes.reference.copy.bind(this)
             }));
@@ -349,7 +363,8 @@ pimcore.object.tree = Class.create({
         //cut
         if (this.id != 1 && !this.attributes.locked) {
             menu.add(new Ext.menu.Item({
-                text: t('cut'),
+                text: t("cut"),
+                itemId: "cut",
                 iconCls: "pimcore_icon_cut",
                 handler: this.attributes.reference.cut.bind(this)
             }));
@@ -359,13 +374,15 @@ pimcore.object.tree = Class.create({
         if (this.attributes.permissions.publish && this.attributes.type != "folder" && !this.attributes.locked) {
             if (this.attributes.published) {
                 menu.add(new Ext.menu.Item({
-                    text: t('unpublish'),
+                    text: t("unpublish"),
+                    itemId: "unpublish",
                     iconCls: "pimcore_icon_tree_unpublish",
                     handler: this.attributes.reference.publishObject.bind(this, this.attributes.id, 'unpublish')
                 }));
             } else {
                 menu.add(new Ext.menu.Item({
-                    text: t('publish'),
+                    text: t("publish"),
+                    itemId: "publish",
                     iconCls: "pimcore_icon_tree_publish",
                     handler: this.attributes.reference.publishObject.bind(this, this.attributes.id, 'publish')
                 }));
@@ -376,7 +393,8 @@ pimcore.object.tree = Class.create({
 
         if (this.attributes.permissions["delete"] && this.id != 1 && !this.attributes.locked) {
             menu.add(new Ext.menu.Item({
-                text: t('delete'),
+                text: t("delete"),
+                itemId: "delete",
                 iconCls: "pimcore_icon_delete",
                 handler: this.attributes.reference.remove.bind(this)
             }));
@@ -384,7 +402,8 @@ pimcore.object.tree = Class.create({
 
         if (this.attributes.permissions.rename && this.id != 1 && !this.attributes.locked) {
             menu.add(new Ext.menu.Item({
-                text: t('rename'),
+                text: t("rename"),
+                itemId: "rename",
                 iconCls: "pimcore_icon_edit_key",
                 handler: this.attributes.reference.editKey.bind(this)
             }));
@@ -398,7 +417,8 @@ pimcore.object.tree = Class.create({
                 var lockMenu = [];
                 if(this.attributes.lockOwner) { // add unlock
                     lockMenu.push({
-                        text: t('unlock'),
+                        text: t("unlock"),
+                        itemId: "unlock",
                         iconCls: "pimcore_icon_lock_delete",
                         handler: function () {
                             this.attributes.reference.updateObject(this.attributes.id, {locked: null}, function () {
@@ -408,7 +428,8 @@ pimcore.object.tree = Class.create({
                     });
                 } else {
                     lockMenu.push({
-                        text: t('lock'),
+                        text: t("lock"),
+                        itemId: "lock",
                         iconCls: "pimcore_icon_lock_add",
                         handler: function () {
                             this.attributes.reference.updateObject(this.attributes.id, {locked: "self"}, function () {
@@ -418,7 +439,8 @@ pimcore.object.tree = Class.create({
                     });
                     
                     lockMenu.push({
-                        text: t('lock_and_propagate_to_childs'),
+                        text: t("lock_and_propagate_to_childs"),
+                        itemId: "lock_and_propagate_to_childs",
                         iconCls: "pimcore_icon_lock_add_propagate",
                         handler: function () {
                             this.attributes.reference.updateObject(this.attributes.id, {locked: "propagate"}, function () {
@@ -429,23 +451,25 @@ pimcore.object.tree = Class.create({
                 }
                 
                 menu.add(new Ext.menu.Item({
-                    text: t('lock'),
+                    text: t("lock"),
+                    itemId: "lock",
                     iconCls: "pimcore_icon_lock",
                     hideOnClick: false,
                     menu:lockMenu
                 }));
             }
         }
-        
-        
-        
+
         if (this.reload) {
             menu.add(new Ext.menu.Item({
-                text: t('refresh'),
+                text: t("refresh"),
+                itemId: "refresh",
                 iconCls: "pimcore_icon_reload",
                 handler: this.reload.bind(this)
             }));
         }
+
+        pimcore.globalmanager.get('event').fireEvent(pimcore.event.pimcoreObjectTreeContextMenuRender, menu, this.id);
 
         menu.show(this.ui.getAnchor());
     },
