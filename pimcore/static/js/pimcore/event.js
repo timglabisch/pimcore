@@ -40,6 +40,7 @@ pimcore.event.pimcore = {
             'tabPanel': {
                 /**
                  * @param Ext.TabPanel
+                 * @param pimcore.document.page
                  * @see pimcore.document.page
                  */
                 'render': 'pimcore.document.page.tabPanel.render'
@@ -54,6 +55,7 @@ pimcore.event.pimcore = {
             'tabPanel': {
                 /**
                  * @param Ext.TabPanel
+                 * @param pimcore.document.email
                  * @see pimcore.document.email
                  */
                 'render': 'pimcore.document.email.tabPanel.render'
@@ -68,6 +70,7 @@ pimcore.event.pimcore = {
             'tabPanel': {
                 /**
                  * @param Ext.TabPanel
+                 * @param pimcore.document.folder
                  * @see pimcore.document.folder
                  */
                 'render': 'pimcore.document.folder.tabPanel.render'
@@ -82,6 +85,7 @@ pimcore.event.pimcore = {
             'tabPanel': {
                 /**
                  * @param Ext.TabPanel
+                 * @param pimcore.document.hardlink
                  * @see pimcore.document.hardlink
                  */
                 'render': 'pimcore.document.hardlink.tabPanel.render'
@@ -96,6 +100,7 @@ pimcore.event.pimcore = {
             'tabPanel': {
                 /**
                  * @param Ext.TabPanel
+                 * @param pimcore.document.link
                  * @see pimcore.document.link
                  */
                 'render': 'pimcore.document.link.tabPanel.render'
@@ -110,6 +115,7 @@ pimcore.event.pimcore = {
             'tabPanel': {
                 /**
                  * @param Ext.TabPanel
+                 * @param pimcore.document.snippet
                  * @see pimcore.document.snippet
                  */
                 'render': 'pimcore.document.snippet.tabPanel.render'
@@ -138,42 +144,90 @@ pimcore.event.pimcore = {
              * @param pimcore.asset.document
              * @see pimcore.asset.document
              */
-            'open': 'pimcore.asset.document.open'
+            'open': 'pimcore.asset.document.open',
+            'tabPanel': {
+                /**
+                 * @param Ext.TabPanel
+                 * @param pimcore.asset.document
+                 * @see pimcore.asset.document
+                 */
+                'render': 'pimcore.asset.document.tabPanel.render'
+            }
         },
         'folder': {
             /**
              * @param pimcore.asset.folder
              * @see pimcore.asset.folder
              */
-            'open': 'pimcore.asset.folder.open'
+            'open': 'pimcore.asset.folder.open',
+            'tabPanel': {
+                /**
+                 * @param Ext.TabPanel
+                 * @param pimcore.asset.folder
+                 * @see pimcore.asset.folder
+                 */
+                'render': 'pimcore.asset.folder.tabPanel.render'
+            }
         },
         'image': {
             /**
              * @param pimcore.asset.image
              * @see pimcore.asset.image
              */
-            'open': 'pimcore.asset.image.open'
+            'open': 'pimcore.asset.image.open',
+            'tabPanel': {
+                /**
+                 * @param Ext.TabPanel
+                 * @param pimcore.image.folder
+                 * @see pimcore.image.folder
+                 */
+                'render': 'pimcore.asset.image.tabPanel.render'
+            }
         },
         'text': {
             /**
              * @param pimcore.asset.text
              * @see pimcore.asset.text
              */
-            'open': 'pimcore.asset.text.open'
+            'open': 'pimcore.asset.text.open',
+            'tabPanel': {
+                /**
+                 * @param Ext.TabPanel
+                 * @param pimcore.text.folder
+                 * @see pimcore.text.folder
+                 */
+                'render': 'pimcore.asset.text.tabPanel.render'
+            }
         },
         'video': {
             /**
              * @param pimcore.asset.video
              * @see pimcore.asset.video
              */
-            'open': 'pimcore.asset.video.open'
+            'open': 'pimcore.asset.video.open',
+            'tabPanel': {
+                /**
+                 * @param Ext.TabPanel
+                 * @param pimcore.video.folder
+                 * @see pimcore.video.folder
+                 */
+                'render': 'pimcore.asset.video.tabPanel.render'
+            }
         },
         'unknown': {
             /**
              * @param pimcore.asset.unknown
              * @see pimcore.asset.unknown
              */
-            'open': 'pimcore.asset.unknown.open'
+            'open': 'pimcore.asset.unknown.open',
+            'tabPanel': {
+                /**
+                 * @param Ext.TabPanel
+                 * @param pimcore.video.folder
+                 * @see pimcore.video.folder
+                 */
+                'render': 'pimcore.asset.unknown.tabPanel.render'
+            }
         },
         'tree': {
             'node': {

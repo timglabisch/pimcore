@@ -64,6 +64,8 @@ pimcore.asset.video = Class.create(pimcore.asset.asset, {
             activeTab: 0
         });
 
+        pimcore.globalmanager.get('event').fireEvent(pimcore.event.pimcore.asset.text.tabPanel.render, this.tabbar, this);
+
         return this.tabbar;
     },
 

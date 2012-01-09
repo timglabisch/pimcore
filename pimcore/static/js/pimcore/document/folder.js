@@ -192,7 +192,7 @@ pimcore.document.folder = Class.create(pimcore.document.document, {
             activeTab: 0
         });
 
-        pimcore.globalmanager.get('event').fireEvent(pimcore.event.pimcore.document.folder.tabPanel.render, tabbar);
+        pimcore.globalmanager.get('event').fireEvent(pimcore.event.pimcore.document.folder.tabPanel.render, tabbar, this);
 
         return tabbar;
     }

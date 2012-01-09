@@ -91,7 +91,7 @@ pimcore.document.email = Class.create(pimcore.document.page_snippet, {
             activeTab: 0
         });
 
-        pimcore.globalmanager.get('event').fireEvent(pimcore.event.pimcore.document.email.tabPanel.render, tabbar);
+        pimcore.globalmanager.get('event').fireEvent(pimcore.event.pimcore.document.email.tabPanel.render, tabbar, this);
 
         return tabbar;
     },

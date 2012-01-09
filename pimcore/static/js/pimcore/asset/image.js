@@ -72,6 +72,8 @@ pimcore.asset.image = Class.create(pimcore.asset.asset, {
             activeTab: 0
         });
 
+        pimcore.globalmanager.get('event').fireEvent(pimcore.event.pimcore.asset.image.tabPanel.render, this.tabbar, this);
+
         return this.tabbar;
     },
 

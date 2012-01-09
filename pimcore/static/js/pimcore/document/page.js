@@ -96,7 +96,7 @@ pimcore.document.page = Class.create(pimcore.document.page_snippet, {
             activeTab: 0
         });
 
-        pimcore.globalmanager.get('event').fireEvent(pimcore.event.pimcore.document.page.tabPanel.render, this.tabbar);
+        pimcore.globalmanager.get('event').fireEvent(pimcore.event.pimcore.document.page.tabPanel.render, this.tabbar, this);
 
         return this.tabbar;
     },

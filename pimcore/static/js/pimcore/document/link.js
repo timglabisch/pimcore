@@ -211,7 +211,7 @@ pimcore.document.link = Class.create(pimcore.document.document, {
             activeTab: 0
         });
 
-        pimcore.globalmanager.get('event').fireEvent(pimcore.event.pimcore.document.link.tabPanel.render, this.tabbar);
+        pimcore.globalmanager.get('event').fireEvent(pimcore.event.pimcore.document.link.tabPanel.render, this.tabbar, this);
 
         return this.tabbar;
     },
