@@ -91,6 +91,48 @@ pimcore.event.pimcore = {
         }
     },
     'asset': {
+        'document': {
+            /**
+             * @param pimcore.asset.document
+             * @see pimcore.asset.document
+             */
+            'open': 'pimcore.asset.document.open'
+        },
+        'folder': {
+            /**
+             * @param pimcore.asset.folder
+             * @see pimcore.asset.folder
+             */
+            'open': 'pimcore.asset.folder.open'
+        },
+        'image': {
+            /**
+             * @param pimcore.asset.image
+             * @see pimcore.asset.image
+             */
+            'open': 'pimcore.asset.image.open'
+        },
+        'text': {
+            /**
+             * @param pimcore.asset.text
+             * @see pimcore.asset.text
+             */
+            'open': 'pimcore.asset.text.open'
+        },
+        'video': {
+            /**
+             * @param pimcore.asset.video
+             * @see pimcore.asset.video
+             */
+            'open': 'pimcore.asset.video.open'
+        },
+        'unknown': {
+            /**
+             * @param pimcore.asset.unknown
+             * @see pimcore.asset.unknown
+             */
+            'open': 'pimcore.asset.unknown.open'
+        },
         'tree': {
             'node': {
                 'contextMenu' : {

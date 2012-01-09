@@ -30,6 +30,8 @@ pimcore.asset.video = Class.create(pimcore.asset.asset, {
         this.permissions = new pimcore.asset.permissions(this);
         this.dependencies = new pimcore.element.dependencies(this, "asset");
 
+        pimcore.globalmanager.get('event').fireEvent(pimcore.event.pimcore.asset.video.open, this);
+
         this.getData();
     },
 

@@ -30,6 +30,8 @@ pimcore.asset.unknown = Class.create(pimcore.asset.asset, {
         this.permissions = new pimcore.asset.permissions(this);
         this.dependencies = new pimcore.element.dependencies(this, "asset");
 
+        pimcore.globalmanager.get('event').fireEvent(pimcore.event.pimcore.asset.unknown.open, this);
+
         this.getData();
     },
 
