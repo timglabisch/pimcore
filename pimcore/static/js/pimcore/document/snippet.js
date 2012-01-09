@@ -20,10 +20,12 @@ pimcore.document.snippet = Class.create(pimcore.document.page_snippet, {
         this.setType("snippet");
 
         pimcore.plugin.broker.fireEvent("preOpenDocument", this, "snippet");
-        pimcore.globalmanager.get('event').fireEvent(pimcore.event.pimcore.document.snippet.open, this);
 
         this.addLoadingPanel();
         this.id = intval(id);
+
+        pimcore.globalmanager.get('event').fireEvent(pimcore.event.pimcore.document.snippet.open, this);
+
         this.getData();
     },
 
@@ -87,6 +89,8 @@ pimcore.document.snippet = Class.create(pimcore.document.page_snippet, {
             items: items,
             activeTab: 0
         });
+
+        pimcore.globalmanager.get('event').fireEvent(pimcore.event.pimcore.document.snippet.tabPanel.render, tabbar);
 
         return tabbar;
     },

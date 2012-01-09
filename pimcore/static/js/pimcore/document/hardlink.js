@@ -20,10 +20,12 @@ pimcore.document.hardlink = Class.create(pimcore.document.document, {
         this.setType("hardlink");
 
         pimcore.plugin.broker.fireEvent("preOpenDocument", this, "link");
-        pimcore.globalmanager.get('event').fireEvent(pimcore.event.pimcore.document.hardlink.open, this);
 
         this.addLoadingPanel();
         this.id = intval(id);
+
+        pimcore.globalmanager.get('event').fireEvent(pimcore.event.pimcore.document.hardlink.open, this);
+
         this.getData();
     },
 
@@ -208,6 +210,8 @@ pimcore.document.hardlink = Class.create(pimcore.document.document, {
             items: items,
             activeTab: 0
         });
+
+        pimcore.globalmanager.get('event').fireEvent(pimcore.event.pimcore.document.hardlink.tabPanel.render, this.tabbar);
 
         return this.tabbar;
     },

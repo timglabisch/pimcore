@@ -20,10 +20,12 @@ pimcore.document.folder = Class.create(pimcore.document.document, {
         this.setType("folder");
 
         pimcore.plugin.broker.fireEvent("preOpenDocument", this, "folder");
-        pimcore.globalmanager.get('event').fireEvent(pimcore.event.pimcore.document.folder.open, this);
 
         this.addLoadingPanel();
         this.id = intval(id);
+
+        pimcore.globalmanager.get('event').fireEvent(pimcore.event.pimcore.document.folder.open, this);
+
         this.getData();
     },
 
@@ -189,6 +191,8 @@ pimcore.document.folder = Class.create(pimcore.document.document, {
             items: items,
             activeTab: 0
         });
+
+        pimcore.globalmanager.get('event').fireEvent(pimcore.event.pimcore.document.folder.tabPanel.render, tabbar);
 
         return tabbar;
     }

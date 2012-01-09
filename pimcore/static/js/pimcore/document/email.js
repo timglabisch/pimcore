@@ -20,10 +20,12 @@ pimcore.document.email = Class.create(pimcore.document.page_snippet, {
         this.setType("email");
 
         pimcore.plugin.broker.fireEvent("preOpenDocument", this, this.getType());
-        pimcore.globalmanager.get('event').fireEvent(pimcore.event.pimcore.document.email.open, this);
 
         this.addLoadingPanel();
         this.id = intval(id);
+
+        pimcore.globalmanager.get('event').fireEvent(pimcore.event.pimcore.document.email.open, this);
+
         this.getData();
     },
 
@@ -51,10 +53,6 @@ pimcore.document.email = Class.create(pimcore.document.page_snippet, {
         this.reports = new pimcore.report.panel("document_snippet", this);
     },
 
-
-
-
-
     getTabPanel: function () {
         var items = [];
         items.push(this.edit.getLayout());
@@ -81,6 +79,7 @@ pimcore.document.email = Class.create(pimcore.document.page_snippet, {
         if(reportLayout) {
             items.push(reportLayout);
         }
+
         var tabbar = new Ext.TabPanel({
             tabPosition: "top",
             region:'center',
@@ -91,6 +90,9 @@ pimcore.document.email = Class.create(pimcore.document.page_snippet, {
             items: items,
             activeTab: 0
         });
+
+        pimcore.globalmanager.get('event').fireEvent(pimcore.event.pimcore.document.email.tabPanel.render, tabbar);
+
         return tabbar;
     },
 
