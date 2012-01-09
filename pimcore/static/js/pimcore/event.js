@@ -32,7 +32,7 @@ pimcore.event.pimcore = {
     },
     'document': {
         'document': {
-            open : 'pimcore.document.document.open'
+            'open' : 'pimcore.document.document.open'
         },
         'tree': {
             /**
