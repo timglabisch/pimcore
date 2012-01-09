@@ -242,6 +242,36 @@ pimcore.event.pimcore = {
         }
     },
     'object': {
+        'object': {
+            'tabPanel': {
+                /**
+                 * @param Ext.TabPanel
+                 * @param pimcore.object.object
+                 * @see pimcore.object.object
+                 */
+                'render': 'pimcore.object.object.tabPanel.render'
+            }
+        },
+        'folder': {
+            'tabPanel': {
+                /**
+                 * @param Ext.TabPanel
+                 * @param pimcore.object.folder
+                 * @see pimcore.object.folder
+                 */
+                'render': 'pimcore.object.folder.tabPanel.render'
+            }
+        },
+        'class': {
+            'tabPanel': {
+                /**
+                 * @param Ext.Panel
+                 * @param pimcore.object.klass
+                 * @see pimcore.object.klass
+                 */
+                'render': 'pimcore.object.class.tabPanel.render'
+            }
+        },
         'tree': {
             'node': {
                 'contextMenu' : {

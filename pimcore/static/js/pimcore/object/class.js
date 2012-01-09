@@ -45,6 +45,8 @@ pimcore.object.klass = Class.create({
             pimcore.layout.refresh();
         }
 
+        pimcore.globalmanager.get('event').fireEvent(pimcore.event.pimcore.object.class.tabPanel.render, this.panel, this);
+
         return this.panel;
     },
 
