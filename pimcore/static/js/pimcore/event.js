@@ -39,3 +39,11 @@ pimcore.event.pimcoreDocumentTreeRender = 'pimcoreDocumentTreeRender';
  * @see document/tree
  */
 pimcore.event.pimcoreDocumentTreeContextMenuRender = 'pimcoreDocumentTreeContextMenuRender';
+
+
+/**
+ * @param Ext.menu.Menu
+ * @param int DocumentId
+ * @see asset/tree
+ */
+pimcore.event.pimcoreAssetTreeContextMenuRender = 'pimcoreAssetTreeContextMenuRender'
