@@ -20,6 +20,7 @@ pimcore.document.folder = Class.create(pimcore.document.document, {
         this.setType("folder");
 
         pimcore.plugin.broker.fireEvent("preOpenDocument", this, "folder");
+        pimcore.globalmanager.get('event').fireEvent(pimcore.event.pimcore.document.folder.open, this);
 
         this.addLoadingPanel();
         this.id = intval(id);

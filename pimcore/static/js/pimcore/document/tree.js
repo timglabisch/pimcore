@@ -103,7 +103,7 @@ pimcore.document.tree = Class.create({
             this.tree.loadMask.enable();
         }.bind(this));
 
-        pimcore.globalmanager.get('event').fireEvent(pimcore.event.pimcoreDocumentTreeRender, this.tree);
+        pimcore.globalmanager.get('event').fireEvent(pimcore.event.pimcore.document.tree.render, this.tree);
 
         this.config.parentPanel.insert(this.config.index, this.tree);
         this.config.parentPanel.doLayout();

@@ -20,7 +20,7 @@ pimcore.document.page = Class.create(pimcore.document.page_snippet, {
         this.setType("page");
 
         pimcore.plugin.broker.fireEvent("preOpenDocument", this, "page");
-        pimcore.globalmanager.get('event').fireEvent(pimcore.event.pimcoreDocumentPreOpen, this);
+        pimcore.globalmanager.get('event').fireEvent(pimcore.event.pimcore.document.page.open, this);
 
         this.addLoadingPanel();
         this.id = intval(id);

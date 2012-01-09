@@ -20,6 +20,7 @@ pimcore.document.email = Class.create(pimcore.document.page_snippet, {
         this.setType("email");
 
         pimcore.plugin.broker.fireEvent("preOpenDocument", this, this.getType());
+        pimcore.globalmanager.get('event').fireEvent(pimcore.event.pimcore.document.email.open, this);
 
         this.addLoadingPanel();
         this.id = intval(id);

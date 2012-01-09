@@ -31,8 +31,47 @@ pimcore.event.pimcore = {
         }
     },
     'document': {
-        'document': {
-            'open' : 'pimcore.document.document.open'
+        'page': {
+            /**
+             * @param pimcore.document.page
+             * @see pimcore.document.page
+             */
+            'open': 'pimcore.document.page.open'
+        },
+        'email' : {
+            /**
+             * @param pimcore.document.email
+             * @see pimcore.document.email
+             */
+            'open': 'pimcore.document.email.open'
+        },
+        'folder' : {
+            /**
+             * @param pimcore.document.folder
+             * @see pimcore.document.folder
+             */
+            'open': 'pimcore.document.folder.open'
+        },
+        'hardlink' : {
+            /**
+             * @param pimcore.document.hardlink
+             * @see pimcore.document.hardlink
+             */
+            'open': 'pimcore.document.hardlink.open'
+        },
+        'link' : {
+            /**
+             * @param pimcore.document.link
+             * @see pimcore.document.link
+             */
+            'open': 'pimcore.document.link.open'
+        },
+        'snippet' : {
+            /**
+             * @param pimcore.document.snippet
+             * @see pimcore.document.snippet
+             */
+            'open': 'pimcore.document.link.open'
         },
         'tree': {
             /**

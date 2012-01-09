@@ -20,6 +20,7 @@ pimcore.document.link = Class.create(pimcore.document.document, {
         this.setType("link");
 
         pimcore.plugin.broker.fireEvent("preOpenDocument", this, "link");
+        pimcore.globalmanager.get('event').fireEvent(pimcore.event.pimcore.document.link.open, this);
 
         this.addLoadingPanel();
         this.id = intval(id);
