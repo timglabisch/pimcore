@@ -37,6 +37,15 @@ pimcore.event.pimcore = {
              * @see pimcore.document.page
              */
             'open': 'pimcore.document.page.open',
+            'toolbar': {
+                /**
+                 * @param Ext.Toolbar
+                 * @param pimcore.document.page_snippet
+                 * @see pimcore.document.page_snippet
+                 * @warning if this event is fired, also pimcore.document.snippet.toolbar.render is fired
+                 */
+                'render': 'pimcore.document.page.toolbar.render'
+            },
             'tabPanel': {
                 /**
                  * @param Ext.TabPanel
@@ -112,6 +121,15 @@ pimcore.event.pimcore = {
              * @see pimcore.document.snippet
              */
             'open': 'pimcore.document.snippet.open',
+            'toolbar': {
+                /**
+                 * @param Ext.Toolbar
+                 * @param pimcore.document.page_snippet
+                 * @see pimcore.document.page_snippet
+                 * @warning if this event is fired, also pimcore.document.page.toolbar.render is fired
+                 */
+                'render': 'pimcore.document.snippt.toolbar.render'
+            },
             'tabPanel': {
                 /**
                  * @param Ext.TabPanel

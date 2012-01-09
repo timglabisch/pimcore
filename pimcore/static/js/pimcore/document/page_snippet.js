@@ -294,6 +294,9 @@ pimcore.document.page_snippet = Class.create(pimcore.document.document, {
             }.bind(this));
         }
 
+        pimcore.globalmanager.get('event').fireEvent(pimcore.event.pimcore.document.page.toolbar.render, this.toolbar, this);
+        pimcore.globalmanager.get('event').fireEvent(pimcore.event.pimcore.document.snippet.toolbar.render, this.toolbar, this);
+
         return this.toolbar;
     },
 
