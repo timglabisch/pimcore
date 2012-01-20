@@ -63,19 +63,13 @@ class User_Abstract_Resource extends Pimcore_Model_Resource_Abstract {
      * @return void
      */
     public function getByName($name) {
-        try {
-            $data = $this->db->fetchRow("SELECT * FROM users WHERE `type` = ? AND `name` = ?", array($this->model->getType(), $name));
 
-            if ($data["id"]) {
-                $this->assignVariablesToModel($data);
-            }
-            else {
-                throw new Exception("user doesn't exist");
-            }
-        }
-        catch (Exception $e) {
-            throw $e;
-        }
+        $data = $this->db->fetchRow("SELECT * FROM users WHERE `type` = ? AND `name` = ?", array($this->model->getType(), $name));
+
+        if(!$data["id"])
+            throw new User_Exception("user doesn't exist");
+
+        $this->assignVariablesToModel($data);
 
     }
 
@@ -114,7 +108,7 @@ class User_Abstract_Resource extends Pimcore_Model_Resource_Abstract {
         }
     }
 
-     /**
+    /**
      * Quick test if there are children
      *
      * @return boolean
