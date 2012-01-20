@@ -231,13 +231,13 @@ class Pimcore_Tool_Authentication {
 
         $user = User::getByName($username);
 
-            if (!$user instanceof User) {
-                throw new Exception("invalid username");
-            } else if (!$user->isActive()) {
-                throw new Exception("user inactive");
-            } else if ($adminRequired and !$user->isAdmin()) {
-                throw new Exception("no permission");
-            }
+        if (!$user instanceof User) {
+            throw new User_Exception_UnknownUser("invalid username");
+        } else if (!$user->isActive()) {
+            throw new User_Exception_Login_Inactive("user inactive");
+        } else if ($adminRequired and !$user->isAdmin()) {
+            throw new User_Exception("no permission");
+        }
 
         $passwordHash = $user->getPassword();
         $decrypted = Pimcore_Tool_Authentication::decrypt($passwordHash, $token, $algorithm, $mode);
