@@ -81,7 +81,7 @@ class User_Abstract extends Pimcore_Model_Abstract {
             $user->getResource()->getByName($name);
             return $user;
         }
-        catch (Exception $e) {
+        catch (User_Exception_UnknownUser $e) {
             return false;
         }
     }
