@@ -1,4 +1,4 @@
-<?php 
+<?php
 /**
  * Pimcore
  *
@@ -40,9 +40,9 @@ class Admin_LoginController extends Pimcore_Controller_Action_Admin {
                         }
                         $uri = $protocol.$_SERVER['SERVER_NAME'];
                         $loginUrl = $uri . "/admin/login/login/?username=" . $username . "&token=" . $token;
-                        
+
                         try {
-                            
+
                             $mail = Pimcore_Tool::getMail(array($user->getEmail()), "Pimcore lost password service");
                             $mail->setBodyText("Login to pimcore and change your password using the following link. This temporary login link will expire in 30 minutes: \r\n\r\n" . $loginUrl);
                             $mail->send();
@@ -72,7 +72,7 @@ class Admin_LoginController extends Pimcore_Controller_Action_Admin {
         }
 
         if ($this->_getParam("auth_failed")) {
-            if ($this->_getParam("inactive")) {
+            if ($this->_getParam("errorType") == 'User_Exception_Login_Inactive') {
                 $this->view->error = "error_user_inactive";
             } else {
                 $this->view->error = "error_auth_failed";
@@ -83,60 +83,52 @@ class Admin_LoginController extends Pimcore_Controller_Action_Admin {
         }
     }
 
+    public function redirectToAdminPanel() {
+        $this->_redirect("/admin/?_dc=" . time());
+        $this->getResponse()->sendResponse();
+        exit;
+    }
+
+    public function storeUserInSession($user) {
+        $adminSession = new Zend_Session_Namespace("pimcore_admin");
+        $adminSession->user = $user;
+        return $this;
+    }
+
     public function loginAction() {
 
-        $userInactive = false;
+        //see if module ore plugin authenticates user
+        $user = Pimcore_API_Plugin_Broker::getInstance()->authenticateUser($this->_getParam("username"),$this->_getParam("password"));
+        if($user instanceof User)
+            return $this->storeUserInSession($user)->redirectToAdminPanel();
+
         try {
             $user = User::getByName($this->_getParam("username"));
 
-            if ($user instanceof User) {
-                if ($user->isActive()) {
-                    $authenticated = false;
+            if (!($user instanceof User))
+                throw new User_Exception_UnknownUser("User doesn't exist");
 
-                    if ($user->getPassword() == Pimcore_Tool_Authentication::getPasswordHash($this->_getParam("username"), $this->_getParam("password"))) {
-                        $authenticated = true;
+            if (!$user->isActive())
+                throw new User_Exception_Login_Inactive("User is inactive");
 
-                    } else if ($this->_getParam("token") and Pimcore_Tool_Authentication::tokenAuthentication($this->_getParam("username"), $this->_getParam("token"), MCRYPT_TRIPLEDES, MCRYPT_MODE_ECB, false)) {
-                        $authenticated = true;
-                    }
-                    else {
-                        throw new Exception("User and Password doesn't match");
-                    }
+            if($this->_getParam("token"))
+                if(!Pimcore_Tool_Authentication::tokenAuthentication($this->_getParam("username"), $this->_getParam("token"), MCRYPT_TRIPLEDES, MCRYPT_MODE_ECB, false))
+                    throw new User_Exception_Login("Wrong Auth Token");
+                else
+                    return $this->storeUserInSession($user)->redirectToAdminPanel();
 
-                    if ($authenticated) {
-                        $adminSession = new Zend_Session_Namespace("pimcore_admin");
-                        $adminSession->user = $user;
-                    }
+            if ($user->getPassword() != Pimcore_Tool_Authentication::getPasswordHash($this->_getParam("username"), $this->_getParam("password")))
+                throw new User_Exception_Login_WrongPassword("User and Password doesn't match");
 
-                } else {
-                    $userInactive = true;
-                    throw new Exception("User is inactive");
+            $this->storeUserInSession($user)->redirectToAdminPanel();
 
-                }
-
-            }
-            else {
-                throw new Exception("User doesn't exist");
-            }
-        } catch (Exception $e) {
-
-            //see if module ore plugin authenticates user
-            $user = Pimcore_API_Plugin_Broker::getInstance()->authenticateUser($this->_getParam("username"),$this->_getParam("password"));
-            if($user instanceof User){
-                $adminSession = new Zend_Session_Namespace("pimcore_admin");
-                $adminSession->user = $user;
-                $this->_redirect("/admin/?_dc=" . time());
-            } else {
-                $this->writeLogFile($this->_getParam("username"), $e->getMessage());
-                Logger::info("Login Exception" . $e);
-
-                $this->_redirect("/admin/login/?auth_failed=true&inactive=" . $userInactive);
-                $this->getResponse()->sendResponse();
-                exit;
-            }
+        } catch (User_Exception $e) {
+            $this->_redirect('/admin/login/?auth_failed=true&errorType='.get_class($e));
+            $this->getResponse()->sendResponse();
+            exit;
         }
 
-        $this->_redirect("/admin/?_dc=" . time());
+        return $this->redirectToAdminPanel();
     }
 
     public function logoutAction() {
