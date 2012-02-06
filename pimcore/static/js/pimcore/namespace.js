@@ -16,6 +16,13 @@ if (!pimcore) {
     var pimcore = {};
 }
 
+pimcore.on = function(event, callback) {
+
+    if(typeof(pimcore.globalmanager.get('event')) == "undefined")
+        throw "pimcore.event is not available";
+
+    return pimcore.globalmanager.get('event').on(event, callback);
+}
 
 pimcore.registerNS = function(namespace) {
     var spaces = namespace.split(".");

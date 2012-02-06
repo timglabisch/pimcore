@@ -20,10 +20,14 @@ pimcore.document.page = Class.create(pimcore.document.page_snippet, {
         this.setType("page");
 
         pimcore.plugin.broker.fireEvent("preOpenDocument", this, "page");
-
         this.addLoadingPanel();
         this.id = intval(id);
+
+
+        pimcore.globalmanager.get('event').fireEvent(pimcore.event.pimcore.document.page.open, this);
+
         this.getData();
+
 
     },
 
@@ -77,7 +81,6 @@ pimcore.document.page = Class.create(pimcore.document.page_snippet, {
             items.push(reportLayout);
         }
 
-
         this.tabbar = new Ext.TabPanel({
             tabPosition: "top",
             region:'center',
@@ -87,6 +90,8 @@ pimcore.document.page = Class.create(pimcore.document.page_snippet, {
             items: items,
             activeTab: 0
         });
+
+        pimcore.globalmanager.get('event').fireEvent(pimcore.event.pimcore.document.page.tabPanel.render, this.tabbar, this);
 
         return this.tabbar;
     },

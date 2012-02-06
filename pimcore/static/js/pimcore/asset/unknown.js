@@ -29,6 +29,8 @@ pimcore.asset.unknown = Class.create(pimcore.asset.asset, {
         this.scheduler = new pimcore.element.scheduler(this, "asset");
         this.dependencies = new pimcore.element.dependencies(this, "asset");
 
+        pimcore.globalmanager.get('event').fireEvent(pimcore.event.pimcore.asset.unknown.open, this);
+
         this.getData();
     },
 
@@ -57,6 +59,8 @@ pimcore.asset.unknown = Class.create(pimcore.asset.asset, {
             items: items,
             activeTab: 0
         });
+
+        pimcore.globalmanager.get('event').fireEvent(pimcore.event.pimcore.asset.unknown.tabPanel.render, this.tabbar, this);
 
         return this.tabbar;
     }

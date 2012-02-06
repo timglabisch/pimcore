@@ -29,6 +29,8 @@ pimcore.asset.text = Class.create(pimcore.asset.asset, {
         this.scheduler = new pimcore.element.scheduler(this, "asset");
         this.dependencies = new pimcore.element.dependencies(this, "asset");
 
+        pimcore.globalmanager.get('event').fireEvent(pimcore.event.pimcore.asset.text.open, this);
+
         this.getData();
     },
 
@@ -58,6 +60,8 @@ pimcore.asset.text = Class.create(pimcore.asset.asset, {
             items: items,
             activeTab: 0
         });
+
+        pimcore.globalmanager.get('event').fireEvent(pimcore.event.pimcore.asset.text.tabPanel.render, this.tabbar, this);
 
         return this.tabbar;
     },

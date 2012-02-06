@@ -27,6 +27,8 @@ pimcore.asset.folder = Class.create(pimcore.asset.asset, {
         this.properties = new pimcore.element.properties(this, "asset");
         this.dependencies = new pimcore.element.dependencies(this, "asset");
 
+        pimcore.globalmanager.get('event').fireEvent(pimcore.event.pimcore.asset.folder.open, this);
+
         this.getData();
     },
 
@@ -116,6 +118,8 @@ pimcore.asset.folder = Class.create(pimcore.asset.asset, {
             items: items,
             activeTab: 0
         });
+
+        pimcore.globalmanager.get('event').fireEvent(pimcore.event.pimcore.asset.folder.tabPanel.render, this.tabbar, this);
 
         return this.tabbar;
     },
