@@ -84,20 +84,19 @@ class Pimcore_Video_Adapter_Ffmpeg extends Pimcore_Video_Adapter {
 
             // add format specific arguments
             if($this->getFormat() == "f4v") {
-                $arguments = "-vcodec libx264 -acodec libfaac -f flv -ar 44000 " . $arguments;
+                $arguments = "-f flv -vcodec libx264 -acodec libfaac -ar 44000 " . $arguments;
             } else if($this->getFormat() == "mp4") {
-                $arguments = "-vcodec libx264 -f mp4 " . $arguments;
-                //$arguments = "-strict experimental -f mp4 -vcodec mpeg4 -acodec aac " . $arguments;
+                $arguments = "-strict experimental -f mp4 -vcodec libx264 -vpre baseline -acodec aac " . $arguments;
             } else if($this->getFormat() == "webm") {
-                $arguments = "-vcodec libvpx -acodec libvorbis -f webm -ar 44000 " . $arguments;
+                $arguments = "-f webm -vcodec libvpx -acodec libvorbis -ar 44000 " . $arguments;
             } else {
                 throw new Exception("Unsupported video output format: " . $this->getFormat());
             }
 
             // add some global arguments
-            $arguments = "-threads 4 " . $arguments;
+            $arguments = "-threads 0 " . $arguments;
 
-            $cmd = self::getFfmpegCli() . ' -i ' . $this->file . ' ' . $arguments . " " . $this->getDestinationFile();
+            $cmd = self::getFfmpegCli() . ' -i ' . realpath($this->file) . ' ' . $arguments . " " . str_replace("/", DIRECTORY_SEPARATOR, $this->getDestinationFile());
             Pimcore_Tool_Console::execInBackground($cmd, $this->getConversionLogFile());
         } else {
             throw new Exception("There is no destination file for video converter");
@@ -113,7 +112,7 @@ class Pimcore_Video_Adapter_Ffmpeg extends Pimcore_Video_Adapter {
             $timeOffset = 5;
         }
 
-        $cmd = self::getFfmpegCli() . " -i " .$this->file . " -vcodec png -vframes 1 -ss " . $timeOffset . " " . $file;
+        $cmd = self::getFfmpegCli() . " -i " . realpath($this->file) . " -vcodec png -vframes 1 -ss " . $timeOffset . " " . str_replace("/", DIRECTORY_SEPARATOR, $file);
         Pimcore_Tool_Console::exec($cmd);
     }
 
@@ -142,6 +141,17 @@ class Pimcore_Video_Adapter_Ffmpeg extends Pimcore_Video_Adapter {
     public function getConversionStatus() {
 
         $log = file_get_contents($this->getConversionLogFile());
+
+        // check if the conversion failed
+        if(stripos($log, "Invalid data found when processing") !== false
+           || stripos($log, "incorrect parameters") !== false
+           || stripos($log, "error") !== false) {
+
+            Logger::critical("Problem converting video: " . $this->file . " to format " . $this->getFormat());
+            Logger::critical($log);
+
+            return "error";
+        }
 
         // get total video duration
         preg_match("/Duration: ([0-9:\.]+),/", $log, $matches);
@@ -176,11 +186,6 @@ class Pimcore_Video_Adapter_Ffmpeg extends Pimcore_Video_Adapter {
             $percent = 1;
         }
 
-        // check if the conversion failed
-        if(stripos($log, "Invalid data found when processing") !== false || stripos($log, "incorrect parameters") !== false || stripos($log, "error") !== false) {
-            return "error";
-        }
-
         return $percent;
     }
 
@@ -211,13 +216,13 @@ class Pimcore_Video_Adapter_Ffmpeg extends Pimcore_Video_Adapter {
     public function setVideoBitrate($videoBitrate) {
         parent::setVideoBitrate($videoBitrate);
 
-        $this->addArgument("videoBitrate", "-vb " . $videoBitrate);
+        $this->addArgument("videoBitrate", "-vb " . $videoBitrate . "k");
     }
 
     public function setAudioBitrate($audioBitrate) {
         parent::setAudioBitrate($audioBitrate);
 
-        $this->addArgument("audioBitrate", "-ab " . $audioBitrate);
+        $this->addArgument("audioBitrate", "-ab " . $audioBitrate . "k");
     }
 
     public function resize ($width, $height) {

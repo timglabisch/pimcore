@@ -101,11 +101,8 @@ pimcore.document.document = Class.create(pimcore.element.abstract, {
     },
 
     activate: function () {
-
         var tabId = "document_" + this.id;
         this.tabPanel.activate(tabId);
-
-
     },
 
     save : function (task, only) {
@@ -161,13 +158,7 @@ pimcore.document.document = Class.create(pimcore.element.abstract, {
     },
 
     remove: function () {
-
-        var tabPanel = Ext.getCmp("pimcore_panel_tabs");
-        tabPanel.remove(this.tab);
-
-        var documentNode = pimcore.globalmanager.get("layout_document_tree").tree.getNodeById(this.id)
-        var f = pimcore.globalmanager.get("layout_document_tree").deleteDocument.bind(documentNode);
-        f();
+        pimcore.helpers.deleteDocument(this.id);
     },
 
     saveClose: function(only){
@@ -217,9 +208,14 @@ pimcore.document.document = Class.create(pimcore.element.abstract, {
             pimcore.globalmanager.get("layout_document_tree").tree.getNodeById(this.data.id).getUI().addClass("pimcore_unpublished");
         } catch (e) {
         }
-        ;
 
         this.save("unpublish");
+    },
+
+    unpublishClose: function () {
+        this.unpublish();
+        var tabPanel = Ext.getCmp("pimcore_panel_tabs");
+        tabPanel.remove(this.tab);
     },
 
     reload: function () {

@@ -53,13 +53,6 @@ class Pimcore {
             }
         }
 
-        // set timezone
-        if ($conf instanceof Zend_Config) {
-            if ($conf->general->timezone) {
-                date_default_timezone_set($conf->general->timezone);
-            }
-        }
-
         $front->registerPlugin(new Pimcore_Controller_Plugin_Maintenance(), 2);
 
 
@@ -70,14 +63,13 @@ class Pimcore {
         }
 
         if (Pimcore_Tool::useFrontendOutputFilters(new Zend_Controller_Request_Http())) {
+            $front->registerPlugin(new Pimcore_Controller_Plugin_Robotstxt(), 795);
             $front->registerPlugin(new Pimcore_Controller_Plugin_WysiwygAttributes(), 796);
             $front->registerPlugin(new Pimcore_Controller_Plugin_Webmastertools(), 797);
             $front->registerPlugin(new Pimcore_Controller_Plugin_Analytics(), 798);
             $front->registerPlugin(new Pimcore_Controller_Plugin_CssMinify(), 800);
             $front->registerPlugin(new Pimcore_Controller_Plugin_JavascriptMinify(), 801);
-            $front->registerPlugin(new Pimcore_Controller_Plugin_HtmlMinify(), 802);
             $front->registerPlugin(new Pimcore_Controller_Plugin_ImageDataUri(), 803);
-            $front->registerPlugin(new Pimcore_Controller_Plugin_CDN(), 804);
             $front->registerPlugin(new Pimcore_Controller_Plugin_Cache(), 901); // for caching
         }
 
@@ -199,8 +191,15 @@ class Pimcore {
 
         Pimcore_API_Plugin_Broker::getInstance()->preDispatch();
 
+
+        // throw exceptions also when in preview or in editmode (documents) to see it immediately when there's a problem with this page
+        $throwExceptions = false;
+        if(array_key_exists("pimcore_editmode", $_REQUEST) || array_key_exists("pimcore_preview", $_REQUEST) || array_key_exists("pimcore_admin", $_REQUEST)) {
+            $throwExceptions = true;
+        }
+
         // run dispatcher
-        if ($frontend && !PIMCORE_DEBUG) {
+        if ($frontend && !(PIMCORE_DEBUG || $throwExceptions)) {
             @ini_set("display_errors", "Off");
             @ini_set("display_startup_errors", "Off");
 
@@ -253,6 +252,9 @@ class Pimcore {
      */
     public static function initLogger() {
 
+        // for forks, etc ...
+        Logger::resetLoggers();
+
         // try to load configuration
         $conf = Pimcore_Config::getSystemConfig();
 
@@ -278,7 +280,7 @@ class Pimcore {
             if (filesize(PIMCORE_LOG_DEBUG) > 200000000) {
                 file_put_contents(PIMCORE_LOG_DEBUG, "");
             }
-            
+
             $prioMapping = array(
                 "debug" => Zend_Log::DEBUG,
                 "info" => Zend_Log::INFO,
@@ -289,8 +291,7 @@ class Pimcore {
                 "alert" => Zend_Log::ALERT,
                 "emergency" => Zend_Log::EMERG
             );
-            
-            $prioConf = array();
+
             $prios = array();
 
             if($conf && $conf->general->loglevel) {
@@ -309,23 +310,21 @@ class Pimcore {
                     $prios[] = $p;
                 }
             }
-            
+
             if(!empty($prios)) {
                 $writerFile = new Zend_Log_Writer_Stream(PIMCORE_LOG_DEBUG);
                 $loggerFile = new Zend_Log($writerFile);
                 Logger::addLogger($loggerFile);
-                
+
                 Logger::setPriorities($prios);
             }
 
-
-           
             $conf = Pimcore_Config::getSystemConfig();
             if($conf) {
                 //email logger
-                if(!empty($conf->general->logrecipient)){
+                if(!empty($conf->general->logrecipient)) {
                     $user = User::getById($conf->general->logrecipient);
-                    if($user instanceof User && $user->isAdmin() ){
+                    if($user instanceof User && $user->isAdmin()) {
                         $email = $user->getEmail();
                         if(!empty($email)){
                             $mail = Pimcore_Tool::getMail(array($email),"pimcore log notification");
@@ -337,11 +336,9 @@ class Pimcore {
                             $loggerEmail = new Zend_Log($writerEmail);
                             Logger::addLogger($loggerEmail);
                         }
-
                     }
                 }
             }
-
         }
     }
 
@@ -554,6 +551,13 @@ class Pimcore {
         // init configuration
         try {
             $conf = Pimcore_Config::getSystemConfig();
+
+            // set timezone
+            if ($conf instanceof Zend_Config) {
+                if ($conf->general->timezone) {
+                    date_default_timezone_set($conf->general->timezone);
+                }
+            }
 
             $debug = self::inDebugMode();
             

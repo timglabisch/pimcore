@@ -1,4 +1,4 @@
-<?php 
+<?php
 /**
  * Pimcore
  *
@@ -9,6 +9,8 @@
  * It is also available through the world-wide-web at this URL:
  * http://www.pimcore.org/license
  *
+ * @category   Pimcore
+ * @package    Asset
  * @copyright  Copyright (c) 2009-2010 elements.at New Media Solutions GmbH (http://www.elements.at)
  * @license    http://www.pimcore.org/license     New BSD License
  */
@@ -81,7 +83,7 @@ class Asset_Image_Thumbnail_Processor {
         // transform image
         $image = Asset_Image::getImageTransformInstance();
         if(!$image->load($fileSystemPath)) {
-            return "/pimcore/static/img/image-not-supported.png";
+            return "/pimcore/static/img/filetype-not-supported.png";
         }
 
         $transformations = $config->getItems();

@@ -37,6 +37,9 @@ class Searchadmin_SearchController extends Pimcore_Controller_Action_Admin {
         $offset = intval($this->_getParam("start"));
         $limit = intval($this->_getParam("limit"));
 
+        $offset = $offset ? $offset : 0;
+        $limit = $limit ? $limit : 50;
+
         $searcherList = new Search_Backend_Data_List();
         $conditionParts = array();
         $db = Pimcore_Resource::get();
@@ -48,7 +51,7 @@ class Searchadmin_SearchController extends Pimcore_Controller_Action_Admin {
             $forbiddenAssetPaths = Element_Service::findForbiddenPaths("asset", $user);
             if (count($forbiddenAssetPaths) > 0) {
                 for ($i = 0; $i < count($forbiddenAssetPaths); $i++) {
-                    $forbiddenAssetPaths[$i] = " (maintype = 'asset' AND fullpath not like ''" . $forbiddenAssetPaths[$i] . "%')";
+                    $forbiddenAssetPaths[$i] = " (maintype = 'asset' AND fullpath not like " . $db->quote($forbiddenAssetPaths[$i] . "%") . ")";
                 }
                 $forbiddenConditions[] = implode(" AND ", $forbiddenAssetPaths) ;
             }
@@ -62,7 +65,7 @@ class Searchadmin_SearchController extends Pimcore_Controller_Action_Admin {
             $forbiddenDocumentPaths = Element_Service::findForbiddenPaths("document", $user);
             if (count($forbiddenDocumentPaths) > 0) {
                 for ($i = 0; $i < count($forbiddenDocumentPaths); $i++) {
-                    $forbiddenDocumentPaths[$i] = " (maintype = 'document' AND fullpath not like '" . $forbiddenDocumentPaths[$i] . "%')";
+                    $forbiddenDocumentPaths[$i] = " (maintype = 'document' AND fullpath not like " . $db->quote($forbiddenDocumentPaths[$i] . "%") . ")";
                 }
                 $forbiddenConditions[] =  implode(" AND ", $forbiddenDocumentPaths) ;
             }
@@ -75,7 +78,7 @@ class Searchadmin_SearchController extends Pimcore_Controller_Action_Admin {
             $forbiddenObjectPaths = Element_Service::findForbiddenPaths("object", $user);
             if (count($forbiddenObjectPaths) > 0) {
                 for ($i = 0; $i < count($forbiddenObjectPaths); $i++) {
-                    $forbiddenObjectPaths[$i] = " (maintype = 'object' AND fullpath not like '" . $forbiddenObjectPaths[$i] . "%')";
+                    $forbiddenObjectPaths[$i] = " (maintype = 'object' AND fullpath not like " . $db->quote($forbiddenObjectPaths[$i] . "%") . ")";
                 }
                 $forbiddenConditions[] = implode(" AND ", $forbiddenObjectPaths);
             }
@@ -87,12 +90,13 @@ class Searchadmin_SearchController extends Pimcore_Controller_Action_Admin {
 
 
         if (!empty($query)) {
-            $queryCondition = "( MATCH (`data`,`fieldcollectiondata`,`localizeddata`,`properties`,`fullpath`) AGAINST (" . $db->quote($query) . " IN BOOLEAN MODE) )";
+            $queryCondition = "( MATCH (`data`,`properties`) AGAINST (" . $db->quote($query) . " IN BOOLEAN MODE) )";
 
+            // the following should be done with an exact-search now "ID", because the Element-ID is now in the fulltext index
             // if the query is numeric the user might want to search by id
-            if(is_numeric($query)) {
-                $queryCondition = "(" . $queryCondition . " OR id = " . $db->quote($query) ." )";
-            }
+            //if(is_numeric($query)) {
+                //$queryCondition = "(" . $queryCondition . " OR id = " . $db->quote($query) ." )";
+            //}
 
             $conditionParts[] = $queryCondition;
         }                      
@@ -163,8 +167,9 @@ class Searchadmin_SearchController extends Pimcore_Controller_Action_Admin {
         $searcherList->setOffset($offset);
         $searcherList->setLimit($limit);
 
-        $searcherList->setOrder("desc");
-        $searcherList->setOrderKey("modificationdate");
+        // do not sort per default, it is VERY SLOW
+        //$searcherList->setOrder("desc");
+        //$searcherList->setOrderKey("modificationdate");
 
         if ($this->_getParam("sort")) {
             $searcherList->setOrderKey($this->_getParam("sort"));
@@ -176,13 +181,11 @@ class Searchadmin_SearchController extends Pimcore_Controller_Action_Admin {
 
 
         $hits = $searcherList->load();
-        $totalMatches = $searcherList->getTotalCount();
 
         $elements=array();
         foreach ($hits as $hit) {
 
             $element = Element_Service::getElementById($hit->getId()->getType(), $hit->getId()->getId());
-            $element->getPermissionsForUser($user);
             if ($element->isAllowed("list")) {
                 if ($element instanceof Object_Abstract) {
                     $data = Object_Service::gridObjectData($element, $fields);
@@ -198,6 +201,14 @@ class Searchadmin_SearchController extends Pimcore_Controller_Action_Admin {
                 //$data = Element_Service::gridElementData($element);
             }
 
+        }
+
+
+        // only get the real total-count when the limit parameter is given otherwise use the default limit
+        if($this->_getParam("limit")) {
+            $totalMatches = $searcherList->getTotalCount();
+        } else {
+            $totalMatches = count($elements);
         }
 
         $this->_helper->json(array("data" => $elements, "success" => true, "total" => $totalMatches));

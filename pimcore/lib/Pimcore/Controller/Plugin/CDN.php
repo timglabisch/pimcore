@@ -20,32 +20,23 @@ class Pimcore_Controller_Plugin_CDN extends Zend_Controller_Plugin_Abstract {
     protected $patterns;
     protected $cachedItems;
     protected $conf;
+    protected $cdnhostnames = array();
+    protected $cdnpatterns = array();
     
     const cacheKey = "cdn_pathes";
 
-    public function routeStartup(Zend_Controller_Request_Abstract $request) {
-
-        $conf = Pimcore_Config::getSystemConfig();
-        if (!$conf->outputfilters) {
-            return $this->disable();
-        }
-
-        if (!$conf->outputfilters->cdn || !$conf->outputfilters->cdnhostnames || !$conf->outputfilters->cdnpatterns) {
-            return $this->disable();
-        }
-        
-        $this->conf = $conf;
+    public function enable () {
+        $this->enabled = true;
     }
 
     public function disable() {
         $this->enabled = false;
-        return true;
     }
     
     protected function getHostnames () {
         if($this->hostnames === null) {
             $this->hostnames = array();
-            $hosts = explode(",",(string) $this->conf->outputfilters->cdnhostnames);
+            $hosts = $this->getCdnhostnames();
             if(is_array($hosts) && count($hosts) > 0) {
                 $this->hostnames = $hosts;
             }
@@ -56,7 +47,7 @@ class Pimcore_Controller_Plugin_CDN extends Zend_Controller_Plugin_Abstract {
     protected function getPatterns () {
         if($this->patterns === null) {
             $this->patterns = array();
-            $patterns = explode(",",$this->conf->outputfilters->cdnpatterns);
+            $patterns = $this->getCdnpatterns();
             if(is_array($patterns) && count($patterns) > 0) {
                 $this->patterns = $patterns;
             }
@@ -142,6 +133,26 @@ class Pimcore_Controller_Plugin_CDN extends Zend_Controller_Plugin_Abstract {
                 Pimcore_Model_Cache::save($this->cachedItems, self::cacheKey, array(), 3600);
             }
         }
+    }
+
+    public function setCdnhostnames($cdnhostnames)
+    {
+        $this->cdnhostnames = $cdnhostnames;
+    }
+
+    public function getCdnhostnames()
+    {
+        return $this->cdnhostnames;
+    }
+
+    public function setCdnpatterns($cdnpatterns)
+    {
+        $this->cdnpatterns = $cdnpatterns;
+    }
+
+    public function getCdnpatterns()
+    {
+        return $this->cdnpatterns;
     }
 }
 

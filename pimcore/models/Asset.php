@@ -143,25 +143,11 @@ class Asset extends Pimcore_Model_Abstract implements Element_Interface {
     public $customSettings = array();
 
     /**
-     * List of permissions set to the asset (no inherited)
-     *
-     * @var array
-     */
-    public $permissions = null;
-
-    /**
      * Dependencies of this asset
      *
      * @var Dependency
      */
     public $dependencies;
-
-    /**
-     * Permissions for a specific user
-     *
-     * @var Asset_Permissions
-     */
-    public $userPermissions;
 
     /**
      * Contains the child elements
@@ -505,20 +491,6 @@ class Asset extends Pimcore_Model_Abstract implements Element_Interface {
                     $property->setCpath($this->getPath() . $this->getKey());
                     $property->save();
                 }
-            }
-        }
-
-        // save permissions
-        $this->getPermissions();
-        if (is_array($this->permissions)) {
-            // remove all permissions
-            $this->getResource()->deleteAllPermissions();
-
-            foreach ($this->permissions as $permission) {
-                $permission->setId(null);
-                $permission->setCid($this->getId());
-                $permission->setCpath($this->getFullPath());
-                $permission->save();
             }
         }
 
@@ -1120,48 +1092,6 @@ class Asset extends Pimcore_Model_Abstract implements Element_Interface {
     }
 
     /**
-     * @return array
-     */
-    public function getPermissions() {
-        if ($this->permissions === null) {
-            $this->setPermissions($this->getResource()->getPermissions());
-        }
-        return $this->permissions;
-    }
-
-    /**
-     * @param array $permissions
-     * @return void
-     */
-    public function setPermissions($permissions) {
-        $this->permissions = $permissions;
-    }
-
-    /**
-     * @param Asset_Permissions $permissions
-     * @return void
-     */
-    public function setUserPermissions(Asset_Permissions $permissions = null) {
-        $this->userPermissions = $permissions;
-    }
-
-    /**
-     * @return Asset_Permissions
-     */
-    public function getUserPermissions(User $user = null) {
-        
-        // get global user if no user is specified and permissions are undefined
-        if(!$user && !$this->userPermissions) {
-            $user = Zend_Registry::get("pimcore_admin_user");
-        }
-        
-        if ($user) {
-            $this->userPermissions = $this->getPermissionsForUser($user);
-        }
-        return $this->userPermissions;
-    }
-
-    /**
      * This is used for user-permissions, pass a permission type (eg. list, view, save) an you know if the current user is allowed to perform the requested action
      *
      * @param string $type
@@ -1169,34 +1099,31 @@ class Asset extends Pimcore_Model_Abstract implements Element_Interface {
      */
     public function isAllowed($type) {
 
-        if (!$this->getUserPermissions() instanceof Asset_Permissions) {
-            return false;
-        }
-
-        $currentUser = $this->getUserPermissions()->getUser();
-
+        $currentUser = Pimcore_Tool_Admin::getCurrentUser();
         //everything is allowed for admin
         if ($currentUser->isAdmin()) {
             return true;
         }
 
-        //check general permission on assets
-        if (!$currentUser->isAllowed("assets")) {
-            return false;
-        }
+        return $this->getResource()->isAllowed($type, $currentUser);
+    }
 
+    /**
+     * @return array
+     */
+    public function getUserPermissions () {
 
-        if ($this->getUserPermissions() instanceof Asset_Permissions) {
+        $vars = get_class_vars("User_Workspace_Asset");
+        $ignored = array("userId","cid","cpath","resource");
+        $permissions = array();
 
-            $method = "get" . $type;
-
-            if (method_exists($this->getUserPermissions(), $method)) {
-                return $this->getUserPermissions()->$method();
+        foreach ($vars as $name => $defaultValue) {
+            if(!in_array($name, $ignored)) {
+                $permissions[$name] = $this->isAllowed($name);
             }
-
         }
 
-        return false;
+        return $permissions;
     }
 
 
@@ -1306,12 +1233,12 @@ class Asset extends Pimcore_Model_Abstract implements Element_Interface {
 
         if(isset($this->_fulldump)) {
             // this is if we want to make a full dump of the object (eg. for a new version), including childs for recyclebin
-            $blockedVars = array("scheduledTasks", "dependencies", "userPermissions", "permissions", "hasChilds", "_oldPath", "versions", "parent");
+            $blockedVars = array("scheduledTasks", "dependencies", "userPermissions", "hasChilds", "_oldPath", "versions", "parent");
             $finalVars[] = "_fulldump";
             $this->removeInheritedProperties();
         } else {
             // this is if we want to cache the object
-            $blockedVars = array("scheduledTasks", "dependencies", "userPermissions", "permissions", "hasChilds", "_oldPath", "versions", "childs", "properties", "data", "parent");
+            $blockedVars = array("scheduledTasks", "dependencies", "userPermissions", "hasChilds", "_oldPath", "versions", "childs", "properties", "data", "parent");
         }
 
 

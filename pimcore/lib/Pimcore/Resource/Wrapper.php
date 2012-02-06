@@ -67,7 +67,23 @@ class Pimcore_Resource_Wrapper {
      * @return mixed
      */
     public function callResourceMethod ($method, $args) {
+
+        $capture = false;
+
+        if(Pimcore::inAdmin()) {
+            $methodsToCheck = array("query","update","delete","insert");
+            if(in_array($method, $methodsToCheck)) {
+                $capture = true;
+                Pimcore_Resource::startCapturingDefinitionModifications($method, $args);
+            }
+        }
+
         $r = call_user_func_array(array($this->getResource(), $method), $args);
+
+        if(Pimcore::inAdmin() && $capture) {
+            Pimcore_Resource::stopCapturingDefinitionModifications();
+        }
+
         return $r;
     }
 }

@@ -129,7 +129,7 @@ class Admin_SettingsController extends Pimcore_Controller_Action_Admin {
             $validLanguages = array();
             foreach ($languages as $short => $translation) {
 
-                if (strlen($short) == 2 or (strlen($short) == 5 and strpos($short, "_") == 2)) {
+                if (strlen($short) == 2 or strpos($short, "_") == 2) {
                     $languageOptions[] = array(
                         "language" => $short,
                         "display" => $translation . " ($short)"
@@ -150,25 +150,6 @@ class Admin_SettingsController extends Pimcore_Controller_Action_Admin {
                             "language" => $existingValue,
                             "display" => $existingValue
                         );
-                    }
-                }
-            }
-
-            //cdn hosts - add as array
-            if (!empty($valueArray['outputfilters']['cdnhostnames'])) {
-                $hostNames = explode(",", $valueArray['outputfilters']['cdnhostnames']);
-                if (is_array($hostNames)) {
-                    foreach ($hostNames as $host) {
-                        $valueArray['outputfilters']['cdnhostnamesArray'][] = array("value" => $host);
-                    }
-                }
-            }
-            //cdn patterns - add as array
-            if (!empty($valueArray['outputfilters']['cdnpatterns'])) {
-                $patterns = explode(",", $valueArray['outputfilters']['cdnpatterns']);
-                if (is_array($patterns)) {
-                    foreach ($patterns as $pattern) {
-                        $valueArray['outputfilters']['cdnpatternsArray'][] = array("value" => $pattern);
                     }
                 }
             }
@@ -205,7 +186,7 @@ class Admin_SettingsController extends Pimcore_Controller_Action_Admin {
             $users = $userList->load();
             if (is_array($users)) {
                 foreach ($users as $user) {
-                    $adminUsers[] = array("id" => $user->getId(), "username" => $user->getUsername());
+                    $adminUsers[] = array("id" => $user->getId(), "username" => $user->getName());
                 }
             }
             $adminUsers[] = array("id" => "", "username" => "-");
@@ -246,6 +227,14 @@ class Admin_SettingsController extends Pimcore_Controller_Action_Admin {
             // convert all special characters to their entities so the xml writer can put it into the file
             $values = array_htmlspecialchars($values);
 
+            $errorPages = array();
+            foreach ($values as $key => $value) {
+                if(strpos($key, "error_pages")) {
+                    $keySteps = explode(".",$key);
+                    $errorPages[$keySteps[2]] = $value;
+                }
+            }
+
             $settings = array(
                 "general" => array(
                     "timezone" => $values["general.timezone"],
@@ -271,7 +260,6 @@ class Admin_SettingsController extends Pimcore_Controller_Action_Admin {
                     ),
                     "devmode" => $values["general.devmode"],
                     "logrecipient" => $values["general.logrecipient"],
-                    "welcomescreen" => $values["general.welcomescreen"],
                     "viewSuffix" => $values["general.viewSuffix"]
                 ),
                 "database" => $oldValues["database"], // db cannot be changed here
@@ -282,7 +270,7 @@ class Admin_SettingsController extends Pimcore_Controller_Action_Admin {
                     ),
                     "default_controller" => $values["documents.default_controller"],
                     "default_action" => $values["documents.default_action"],
-                    "error_page" => $values["documents.error_page"],
+                    "error_pages" => $errorPages,
                     "allowtrailingslash" => $values["documents.allowtrailingslash"],
                     "allowcapitals" => $values["documents.allowcapitals"]
                 ),
@@ -326,11 +314,7 @@ class Admin_SettingsController extends Pimcore_Controller_Action_Admin {
                     "lesscpath" => $values["outputfilters.lesscpath"],
                     "cssminify" => $values["outputfilters.cssminify"],
                     "javascriptminify" => $values["outputfilters.javascriptminify"],
-                    "javascriptminifyalgorithm" => $values["outputfilters.javascriptminifyalgorithm"],
-                    "htmlminify" => $values["outputfilters.htmlminify"],
-                    "cdn" => $values["outputfilters.cdn"],
-                    "cdnhostnames" => $values["outputfilters.cdnhostnames"],
-                    "cdnpatterns" => $values["outputfilters.cdnpatterns"]
+                    "javascriptminifyalgorithm" => $values["outputfilters.javascriptminifyalgorithm"]
                 ),
                 "email" => array(
                     "sender" => array(
@@ -1302,23 +1286,19 @@ class Admin_SettingsController extends Pimcore_Controller_Action_Admin {
     public function thumbnailUpdateAction () {
 
         $pipe = Asset_Image_Thumbnail_Config::getByName($this->_getParam("name"));
-        $data = Zend_Json::decode($this->_getParam("configuration"));
+        $settingsData = Zend_Json::decode($this->_getParam("settings"));
+        $itemsData = Zend_Json::decode($this->_getParam("items"));
 
-        $items = array();
-        foreach ($data as $key => $value) {
+        foreach ($settingsData as $key => $value) {
             $setter = "set" . ucfirst($key);
             if(method_exists($pipe, $setter)) {
                 $pipe->$setter($value);
             }
-
-            if(strpos($key,"item.") === 0) {
-                $cleanKeyParts = explode(".",$key);
-                $items[$cleanKeyParts[1]][$cleanKeyParts[2]] = $value;
-            }
         }
 
         $pipe->resetItems();
-        foreach ($items as $item) {
+
+        foreach ($itemsData as $item) {
 
             $type = $item["type"];
             unset($item["type"]);
@@ -1436,5 +1416,31 @@ class Admin_SettingsController extends Pimcore_Controller_Action_Admin {
         $this->deleteVideoThumbnailTmpFiles($pipe);
 
         $this->_helper->json(array("success" => true));
+    }
+
+    public function robotsTxtAction () {
+
+        $robotsPath = PIMCORE_CONFIGURATION_DIRECTORY . "/robots.txt";
+
+        if($this->_getParam("data")) {
+            // save data
+            file_put_contents($robotsPath, $this->_getParam("data"));
+
+            $this->_helper->json(array(
+                "success" => true
+            ));
+        } else {
+            // get data
+            $data = "";
+            if(is_file($robotsPath)) {
+                $data = file_get_contents($robotsPath);
+            }
+
+            $this->_helper->json(array(
+                "success" => true,
+                "data" => $data,
+                "onFileSystem" => file_exists(PIMCORE_DOCUMENT_ROOT . "/robots.txt")
+            ));
+        }
     }
 }

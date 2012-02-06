@@ -67,6 +67,8 @@ class Admin_LoginController extends Pimcore_Controller_Action_Admin {
 
     public function indexAction() {
 
+        Zend_Session::regenerateId();
+
         if ($this->getUser() instanceof User) {
             $this->_redirect("/admin/?_dc=" . time());
         }
@@ -81,6 +83,14 @@ class Admin_LoginController extends Pimcore_Controller_Action_Admin {
         if ($this->_getParam("session_expired")) {
             $this->view->error = "error_session_expired";
         }
+    }
+
+    public function deeplinkAction () {
+        // check for deeplink
+        if($_SERVER["QUERY_STRING"]) {
+            setcookie("pimcore_opentabs", "," . $_SERVER["QUERY_STRING"] . ",", null, "/");
+        }
+        $this->_redirect("/admin/");
     }
 
     public function loginAction() {
@@ -106,7 +116,6 @@ class Admin_LoginController extends Pimcore_Controller_Action_Admin {
                     if ($authenticated) {
                         $adminSession = new Zend_Session_Namespace("pimcore_admin");
                         $adminSession->user = $user;
-                        $adminSession->frozenuser = $user->getAsFrozen();
                     }
 
                 } else {
@@ -126,7 +135,6 @@ class Admin_LoginController extends Pimcore_Controller_Action_Admin {
             if($user instanceof User){
                 $adminSession = new Zend_Session_Namespace("pimcore_admin");
                 $adminSession->user = $user;
-                $adminSession->frozenuser = $user->getAsFrozen();
                 $this->_redirect("/admin/?_dc=" . time());
             } else {
                 $this->writeLogFile($this->_getParam("username"), $e->getMessage());
@@ -147,7 +155,6 @@ class Admin_LoginController extends Pimcore_Controller_Action_Admin {
         if ($adminSession->user instanceof User) {
             Pimcore_API_Plugin_Broker::getInstance()->preLogoutUser($adminSession->user);
             $adminSession->user = null;
-            $adminSession->frozenuser = null;
         }
 
         Zend_Session::destroy();

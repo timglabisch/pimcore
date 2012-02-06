@@ -9,6 +9,8 @@
  * It is also available through the world-wide-web at this URL:
  * http://www.pimcore.org/license
  *
+ * @category   Pimcore
+ * @package    Element
  * @copyright  Copyright (c) 2009-2010 elements.at New Media Solutions GmbH (http://www.elements.at)
  * @license    http://www.pimcore.org/license     New BSD License
  */
@@ -86,7 +88,7 @@ class Element_Recyclebin_Item extends Pimcore_Model_Abstract {
         $this->setDate(time());
         $this->loadChilds($this->getElement());
         if($user instanceof User){
-            $this->setDeletedby($user->getUsername());
+            $this->setDeletedby($user->getName());
         }
 
 
@@ -130,7 +132,6 @@ class Element_Recyclebin_Item extends Pimcore_Model_Abstract {
         
         // for all
         $element->getProperties();
-        $element->getPermissions();
         if(method_exists($element,"getScheduledTasks")) {
             $element->getScheduledTasks();
         }

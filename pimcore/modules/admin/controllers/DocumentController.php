@@ -24,7 +24,7 @@ class Admin_DocumentController extends Pimcore_Controller_Action_Admin {
         parent::init();
 
         // check permissions
-        $notRestrictedActions = array();
+        $notRestrictedActions = array("doc-types");
         if (!in_array($this->_getParam("action"), $notRestrictedActions)) {
             if (!$this->getUser()->isAllowed("documents")) {
 
@@ -55,7 +55,6 @@ class Admin_DocumentController extends Pimcore_Controller_Action_Admin {
     public function getDataByIdAction() {
 
         $document = Document::getById($this->_getParam("id"));
-        $document->getPermissionsForUser($this->getUser());
         if ($document->isAllowed("view")) {
             $this->_helper->json($document);
         }
@@ -71,231 +70,11 @@ class Admin_DocumentController extends Pimcore_Controller_Action_Admin {
         }
 
         $root = Document::getById($id);
-        $root->getPermissionsForUser($this->getUser());
-
         if ($root->isAllowed("list")) {
             $this->_helper->json($this->getTreeNodeConfig($root));
         }
 
         $this->_helper->json(array("success" => false, "message" => "missing_permission"));
-    }
-
-
-    public function getUserPermissionsAction() {
-
-        $document = Document::getById($this->_getParam("document"));
-
-        $list = new User_List();
-        $list->load();
-        $users = $list->getUsers();
-        if (!empty($users)) {
-            foreach ($users as $user) {
-                $permission = $document->getUserPermissions($user);
-                $permission->setUser($user);
-                $permission->setUserId($user->getId());
-                $permission->setUsername($user->getUsername());
-                $permissions[] = $permission;
-                Logger::debug($permission->getUser()->getUsername());
-            }
-        }
-
-        $document->getPermissionsForUser($this->getUser());
-        if ($document->isAllowed("view")) {
-            $this->_helper->json(array("permissions" => $permissions));
-        }
-
-       $this->_helper->json(array("success" => false, "message" => "missing_permission"));
-    }
-
-    public function getTreePermissionsAction() {
-
-
-        $this->removeViewRenderer();
-        $user = User::getById($this->_getParam("user"));
-
-        if ($this->_getParam("xaction") == "update") {
-            $data = json_decode($this->_getParam("data"));
-            if (!empty($data->id)) {
-                $nodes[] = $data;
-            } else {
-                $nodes = $data;
-            }
-            //loop through store nodes  = documents to edit
-            if (is_array($nodes)) {
-
-                foreach ($nodes as $node) {
-                    $document = Document::getById($node->id);
-                    $parent = Document::getById($document->getParentId());
-                    $documentPermission = $document->getPermissionsForUser($user);
-                    if ($documentPermission instanceof Document_Permissions) {
-                        $found = true;
-                        if (!$node->permissionSet) {
-                            //reset permission by deleting it
-                            if($documentPermission->getCid() == $document->getId()){
-                                 $documentPermission->delete();
-                                $permissions = $document->getPermissions();
-                            }
-                            break;
-
-                        } else {
-
-                            if ($documentPermission->getCid() != $document->getId() or $documentPermission->getUser()->getId() != $user->getId()) {
-                                //we got a parent's permission create new permission
-                                //or we got a usergroup permission, create a new permission for specific user
-                                $documentPermission = new Document_Permissions();
-                                $documentPermission->setUser($user);
-                                $documentPermission->setUserId($user->getId());
-                                $documentPermission->setUsername($user->getUsername());
-                                $documentPermission->setCid($document->getId());
-                                $documentPermission->setCpath($document->getFullPath());
-                            }
-
-                            //update document_permission
-                            $doSave = true;
-                            $permissionNames = $documentPermission->getValidPermissionKeys();
-                            foreach ($permissionNames as $name) {
-                                //check if parent allows list
-                                if ($parent) {
-                                    $parent->getPermissionsForUser($user);
-                                    $parentList = $parent->isAllowed("list");
-                                } else {
-                                    $parentList = true;
-                                }
-                                $setterName = "set" . ucfirst($name);
-
-                                if (isset($node->$name) and $node->$name and $parentList) {
-                                    $documentPermission->$setterName(true);
-                                } else if (isset($node->$name)) {
-                                    $documentPermission->$setterName(false);
-                                    //if no list permission set all to false
-                                    if ($name == "list") {
-
-                                        foreach ($permissionNames as $n) {
-                                            $setterName = "set" . ucfirst($n);
-                                            $documentPermission->$setterName(false);
-                                        }
-                                        break;
-                                    }
-                                }
-                            }
-
-                            $documentPermission->save();
-
-                            if ($node->evictChildrenPermissions) {
-
-                                $successorList = new Document_List();
-                                $successorList->setOrderKey("index");
-                                $successorList->setOrder("asc");
-                                if ($document->getParentId() < 1) {
-                                    $successorList->setCondition("parentId > 0");
-
-                                } else {
-                                    $successorList->setCondition("path like '" . $document->getFullPath() . "/%'");
-                                }
-                                Logger::debug($successorList->getCondition());
-                                $successors = $successorList->load();
-                                foreach ($successors as $successor) {
-
-                                    $permission = $successor->getPermissionsForUser($user);
-                                    if ($permission->getId() > 0 and $permission->getCid() == $successor->getId()) {
-                                        $permission->delete();
-
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                $this->_helper->json(array(
-                    "success" => true
-                ));
-            }
-        } else if ($this->_getParam("xaction") == "destroy") {
-            //ignore
-        } else {
-            //read
-            if ($user instanceof User) {
-                $userPermissionsNamespace = new Zend_Session_Namespace('documentUserPermissions');
-                if (!isset($userPermissionsNamespace->expandedNodes) or $userPermissionsNamespace->currentUser != $user->getId()) {
-                    $userPermissionsNamespace->currentUser = $user->getId();
-                    $userPermissionsNamespace->expandedNodes = array();
-                }
-
-                if (is_numeric($this->_getParam("anode")) and $this->_getParam("anode") > 0) {
-                    $node = $this->_getParam("anode");
-                    $document = Document::getById($node);
-
-                    if ($document->hasChilds()) {
-
-                        $list = new Document_List();
-                        $list->setCondition("parentId = ?", $document->getId());
-                        $list->setOrderKey("index");
-                        $list->setOrder("asc");
-                        $childsList = $list->load();
-                        $requestedNodes = array();
-                        foreach ($childsList as $child) {
-                            $requestedNodes[] = $child->getId();
-                        }
-
-                        $userPermissionsNamespace->expandedNodes = array_merge($userPermissionsNamespace->expandedNodes, $requestedNodes);
-                    }
-                } else {
-                    $userPermissionsNamespace->expandedNodes = array_merge($userPermissionsNamespace->expandedNodes, array(1));
-                }
-
-                //load all nodes which are open in client
-                $documentList = new Document_List();
-                $documentList->setOrderKey("index");
-                $documentList->setOrder("asc");
-                $queryIds = "'" . implode("','", $userPermissionsNamespace->expandedNodes) . "'";
-                $documentList->setCondition("id in (" . $queryIds . ")");
-
-                $o = $documentList->load();
-                $total = count($o);
-                $documents = array();
-                foreach ($o as $document) {
-                    if ($document->getParentId() > 0) {
-                        $parent = Document::getById($document->getParentId());
-                    } else $parent = null;
-
-                    // get current user permissions
-                    $document->getPermissionsForUser($this->getUser());
-                    // only display document if listing is allowed for the current user
-                    if ($document->isAllowed("list") and $document->isAllowed("permissions")) {
-                        $permission = $this->getTreeNodePermissionConfig($user, $document, $parent, true);
-                        $documents[] = $permission;
-                        $tmpDocuments[$document->getId()] = $permission;
-                    }
-                }
-
-                //only visible nodes and in the order how they should be displayed ... doesn't make sense but seems to fix bug of duplicate nodes
-                $documentsForFrontend = array();
-                $visible = $this->_getParam("visible");
-                if ($visible) {
-                    $visibleNodes = explode(",", $visible);
-                    foreach ($visibleNodes as $nodeId) {
-                        $documentsForFrontend[] = $tmpDocuments[$nodeId];
-                        if ($nodeId == $this->_getParam("anode") and is_array($requestedNodes)) {
-                            foreach ($requestedNodes as $nId) {
-                                $documentsForFrontend[] = $tmpDocuments[$nId];
-                            }
-                        }
-                    }
-                    $documents = $documentsForFrontend;
-                }
-
-            }
-
-
-            $this->_helper->json(array(
-                "total" => $total,
-                "data" => $documents,
-                "success" => true
-            ));
-
-
-        }
-
     }
 
     public function treeGetChildsByIdAction() {
@@ -320,8 +99,6 @@ class Admin_DocumentController extends Pimcore_Controller_Action_Admin {
             $childsList = $list->load();
 
             foreach ($childsList as $childDocument) {
-                // get current user permissions
-                $childDocument->getPermissionsForUser($this->getUser());
                 // only display document if listing is allowed for the current user
                 if ($childDocument->isAllowed("list")) {
                     $documents[] = $this->getTreeNodeConfig($childDocument);
@@ -348,7 +125,6 @@ class Admin_DocumentController extends Pimcore_Controller_Action_Admin {
 
         // check for permission
         $parentDocument = Document::getById(intval($this->_getParam("parentId")));
-        $parentDocument->getPermissionsForUser($this->getUser());
         if ($parentDocument->isAllowed("create")) {
             $intendedPath = $parentDocument->getFullPath() . "/" . $this->_getParam("key");
 
@@ -458,8 +234,6 @@ class Admin_DocumentController extends Pimcore_Controller_Action_Admin {
 
         } else if($this->_getParam("id")) {
             $document = Document::getById($this->_getParam("id"));
-            $document->getPermissionsForUser($this->getUser());
-
             if ($document->isAllowed("delete")) {
                 Element_Recyclebin_Item::create($document, $this->getUser());
                 $document->delete();
@@ -566,10 +340,6 @@ class Admin_DocumentController extends Pimcore_Controller_Action_Admin {
         $allowUpdate = true;
 
         $document = Document::getById($this->_getParam("id"));
-
-        // check for permissions
-        $document->getPermissionsForUser($this->getUser());
-
         if ($document->isAllowed("settings")) {
 
             // if the position is changed the path must be changed || also from the childs
@@ -790,7 +560,6 @@ class Admin_DocumentController extends Pimcore_Controller_Action_Admin {
         $document = $version->loadData();
 
         $currentDocument = Document::getById($document->getId());
-        $currentDocument->getPermissionsForUser($this->getUser());
         if ($currentDocument->isAllowed("publish")) {
             $document->setPublished(true);
             try {
@@ -1009,7 +778,6 @@ class Admin_DocumentController extends Pimcore_Controller_Action_Admin {
         }
 
         if($target instanceof Document) {
-            $target->getPermissionsForUser($this->getUser());
             if ($target->isAllowed("create")) {
                 if ($source != null) {
                     if ($this->_getParam("type") == "child") {
@@ -1103,6 +871,7 @@ class Admin_DocumentController extends Pimcore_Controller_Action_Admin {
             "elementType" => "document",
             "leaf" => true,
             "permissions" => array(
+                "view" => $childDocument->isAllowed("view"),
                 "remove" => $childDocument->isAllowed("delete"),
                 "settings" => $childDocument->isAllowed("settings"),
                 "rename" => $childDocument->isAllowed("rename"),
@@ -1160,129 +929,6 @@ class Admin_DocumentController extends Pimcore_Controller_Action_Admin {
         return $tmpDocument;
     }
 
-    /**
-     * @param  User $user
-     * @param  Document $childDocument
-     * @param  Document $parentDocument
-     * @param boolean $expanded
-     * @return
-     */
-    protected function getTreeNodePermissionConfig($user, $childDocument, $parentDocument, $expanded) {
-
-        $userGroup = $user->getParent();
-        if ($userGroup instanceof User) {
-            $childDocument->getPermissionsForUser($userGroup);
-
-            $lock_list = $childDocument->isAllowed("list");
-            $lock_view = $childDocument->isAllowed("view");
-            $lock_save = $childDocument->isAllowed("save");
-            $lock_publish = $childDocument->isAllowed("publish");
-            $lock_unpublish = $childDocument->isAllowed("unpublish");
-            $lock_delete = $childDocument->isAllowed("delete");
-            $lock_rename = $childDocument->isAllowed("rename");
-            $lock_create = $childDocument->isAllowed("create");
-            $lock_permissions = $childDocument->isAllowed("permissions");
-            $lock_settings = $childDocument->isAllowed("settings");
-            $lock_versions = $childDocument->isAllowed("versions");
-            $lock_properties = $childDocument->isAllowed("properties");
-            $lock_properties = $childDocument->isAllowed("properties");
-        }
-
-
-        if ($parentDocument) {
-            $parentDocument->getPermissionsForUser($user);
-        }
-        $documentPermission = $childDocument->getPermissionsForUser($user);
-
-        $generallyAllowed = $user->isAllowed("documents");
-        $parentId = (int) $childDocument->getParentId();
-        $parentAllowedList = true;
-        if ($parentDocument instanceof Document) {
-            $parentAllowedList = $parentDocument->isAllowed("list") and $generallyAllowed;
-        }
-
-        $tmpDocument = array(
-            "_parent" => $parentId > 0 ? $parentId : null,
-            "_id" => (int) $childDocument->getId(),
-            "text" => $childDocument->getKey(),
-            "type" => $childDocument->getType(),
-            "path" => $childDocument->getFullPath(),
-            "basePath" => $childDocument->getPath(),
-            "elementType" => "document",
-            "permissionSet" => $documentPermission->getId() > 0 and $documentPermission->getCid() === $childDocument->getId(),
-            "list" => $childDocument->isAllowed("list"),
-            "list_editable" => $parentAllowedList and $generallyAllowed and !$lock_list and !$user->isAdmin(),
-            "view" => $childDocument->isAllowed("view"),
-            "view_editable" => $childDocument->isAllowed("list") and $generallyAllowed and !$lock_view and !$user->isAdmin(),
-            "save" => $childDocument->isAllowed("save"),
-            "save_editable" => $childDocument->isAllowed("list") and $generallyAllowed and !$lock_save and !$user->isAdmin(),
-            "publish" => $childDocument->isAllowed("publish"),
-            "publish_editable" => $childDocument->isAllowed("list") and $generallyAllowed and !$lock_publish and !$user->isAdmin(),
-            "unpublish" => $childDocument->isAllowed("unpublish"),
-            "unpublish_editable" => $childDocument->isAllowed("list") and $generallyAllowed and !$lock_unpublish and !$user->isAdmin(),
-            "delete" => $childDocument->isAllowed("delete"),
-            "delete_editable" => $childDocument->isAllowed("list") and $generallyAllowed and !$lock_delete and !$user->isAdmin(),
-            "rename" => $childDocument->isAllowed("rename"),
-            "rename_editable" => $childDocument->isAllowed("list") and $generallyAllowed and !$lock_rename and !$user->isAdmin(),
-            "create" => $childDocument->isAllowed("create"),
-            "create_editable" => $childDocument->isAllowed("list") and $generallyAllowed and !$lock_create and !$user->isAdmin(),
-            "permissions" => $childDocument->isAllowed("permissions"),
-            "permissions_editable" => $childDocument->isAllowed("list") and $generallyAllowed and !$lock_permissions and !$user->isAdmin(),
-            "settings" => $childDocument->isAllowed("settings"),
-            "settings_editable" => $childDocument->isAllowed("list") and $generallyAllowed and !$lock_settings and !$user->isAdmin(),
-            "versions" => $childDocument->isAllowed("versions"),
-            "versions_editable" => $childDocument->isAllowed("list") and $generallyAllowed and !$lock_versions and !$user->isAdmin(),
-            "properties" => $childDocument->isAllowed("properties"),
-            "properties_editable" => $childDocument->isAllowed("list") and $generallyAllowed and !$lock_properties and !$user->isAdmin()
-
-        );
-
-        $tmpDocument["expanded"] = $expanded;
-        $tmpDocument["iconCls"] = "pimcore_icon_" . $childDocument->getType();
-
-        // set type specific settings
-        if ($childDocument->getType() == "page") {
-            $tmpDocument["_is_leaf"] = $childDocument->hasNoChilds();
-            $tmpDocument["iconCls"] = "pimcore_icon_page";
-
-            // test for a site
-            try {
-                $site = Site::getByRootId($childDocument->getId());
-                $tmpDocument["iconCls"] = "pimcore_icon_site";
-                $tmpDocument["site"] = $site;
-            }
-            catch (Exception $e) {
-            }
-        }
-        else if ($childDocument->getType() == "folder") {
-
-            $tmpDocument["_is_leaf"] = $childDocument->hasNoChilds();
-
-            if ($childDocument->hasNoChilds()) {
-                $tmpDocument["iconCls"] = "pimcore_icon_folder";
-            }
-
-        } else if ($childDocument->getType() == "link") {
-
-            $tmpDocument["_is_leaf"] = $childDocument->hasNoChilds();
-
-            if ($childDocument->hasNoChilds()) {
-                $tmpDocument["iconCls"] = "pimcore_icon_link";
-            }
-        }
-        else {
-            $tmpDocument["leaf"] = true;
-            $tmpDocument["_is_leaf"] = true;
-        }
-
-        if (!$childDocument->isPublished()) {
-            $tmpDocument["cls"] = "pimcore_unpublished";
-        }
-
-        return $tmpDocument;
-    }
-
-
     public function getIdForPathAction() {
 
         if ($doc = Document::getByPath($this->_getParam("path"))) {
@@ -1308,4 +954,183 @@ class Admin_DocumentController extends Pimcore_Controller_Action_Admin {
     }
 
 
+
+
+    /**
+     * SEO PANEL
+     */
+    public function seopanelTreeRootAction() {
+        $root = Document::getById(1);
+        if ($root->isAllowed("list")) {
+
+            $nodeConfig = $this->getTreeNodeConfig($root);
+            $nodeConfig["title"] = $root->getTitle();
+            $nodeConfig["description"] = $root->getDescription();
+
+            $this->_helper->json($nodeConfig);
+        }
+
+        $this->_helper->json(array("success" => false, "message" => "missing_permission"));
+    }
+
+
+    public function seopanelTreeAction() {
+
+        $document = Document::getById($this->_getParam("node"));
+
+        $documents = array();
+        if ($document->hasChilds()) {
+
+            $list = new Document_List();
+            $list->setCondition("parentId = ?", $document->getId());
+            $list->setOrderKey("index");
+            $list->setOrder("asc");
+
+            $childsList = $list->load();
+
+            foreach ($childsList as $childDocument) {
+                // only display document if listing is allowed for the current user
+                if ($childDocument->isAllowed("list")) {
+
+                    $list = new Document_List();
+                    $list->setCondition("path LIKE ? and type = ?", array($childDocument->getFullPath() . "/%", "page"));
+
+                    if($childDocument instanceof Document_Page || $list->getTotalCount() > 0) {
+                        $nodeConfig = $this->getTreeNodeConfig($childDocument);
+
+                        if(method_exists($childDocument, "getTitle") && method_exists($childDocument, "getDescription")) {
+                            $nodeConfig["title"] = $childDocument->getTitle();
+                            $nodeConfig["description"] = $childDocument->getDescription();
+
+                            // anaylze content
+                            $nodeConfig["links"] = 0;
+                            $nodeConfig["externallinks"] = 0;
+                            $nodeConfig["h1"] = 0;
+                            $nodeConfig["h1_text"] = "";
+                            $nodeConfig["hx"] = 0;
+                            $nodeConfig["imgwithalt"] = 0;
+                            $nodeConfig["imgwithoutalt"] = 0;
+
+                            try {
+
+                                // cannot use the rendering service from Document_Service::render() because of singleton's ...
+                                // $content = Document_Service::render($childDocument, array("pimcore_admin" => true, "pimcore_preview" => true), true);
+                                $contentUrl = $this->getRequest()->getScheme() . "://" . $_SERVER["HTTP_HOST"] . $childDocument->getFullPath();
+                                $content = Pimcore_Tool::getHttpData($contentUrl, array(
+                                    "pimcore_preview" => true,
+                                    "pimcore_admin" => true,
+                                    "_dc" => time()
+                                ));
+
+                                if($content) {
+                                    $html = str_get_html($content);
+                                    if($html) {
+                                        $nodeConfig["links"] = count($html->find("a"));
+                                        $nodeConfig["externallinks"] = count($html->find("a[href^=http]"));
+                                        $nodeConfig["h1"] = count($html->find("h1"));
+
+                                        $h1 = $html->find("h1",0);
+                                        if($h1) {
+                                            $nodeConfig["h1_text"] = strip_tags($h1->innertext);
+                                        }
+
+                                        $nodeConfig["hx"] = count($html->find("h2,h2,h4,h5"));
+
+                                        $images = $html->find("img");
+                                        if($images) {
+                                            foreach ($images as $image) {
+                                                $alt = $image->alt;
+                                                if(empty($alt)) {
+                                                    $nodeConfig["imgwithoutalt"]++;
+                                                } else {
+                                                    $nodeConfig["imgwithalt"]++;
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            } catch (Exception $e) {
+                                Logger::debug($e);
+                            }
+
+                            if(strlen($childDocument->getTitle()) > 80
+                              || strlen($childDocument->getTitle()) < 5
+                              || strlen($childDocument->getDescription()) > 180
+                              || strlen($childDocument->getDescription()) < 20
+                              || $nodeConfig["h1"] != 1
+                              || $nodeConfig["hx"] < 1) {
+                                $nodeConfig["cls"] = "pimcore_document_seo_warning";
+                            }
+                        }
+
+                        $documents[] = $nodeConfig;
+                    }
+                }
+            }
+        }
+
+        $this->_helper->json($documents);
+    }
+
+    /**
+     * page & snippet controller/action/template selector store providers
+     */
+
+
+    public function getAvailableControllersAction() {
+
+        $controllers = array();
+        $controllerFiles = scandir(PIMCORE_WEBSITE_PATH . "/controllers");
+        foreach ($controllerFiles as $file) {
+            $dat = array();
+            if(strpos($file, ".php") !== false) {
+                $file = lcfirst(str_replace("Controller.php","",$file));
+                $dat["name"] = strtolower(preg_replace("/[A-Z]/","-\\0", $file));
+                $controllers[] = $dat;
+            }
+        }
+
+        $this->_helper->json(array(
+            "data" => $controllers
+        ));
+    }
+
+    public function getAvailableActionsAction () {
+
+        $actions = array();
+        $controller = $this->_getParam("controllerName");
+        $controllerClass = str_replace("-", " ", $controller);
+        $controllerClass = str_replace(" ", "", ucwords($controllerClass));
+        $controllerFile = PIMCORE_WEBSITE_PATH . "/controllers/" . $controllerClass . "Controller.php";
+        if(is_file($controllerFile)) {
+            preg_match_all("/function[ ]+([a-zA-Z0-9]+)Action/i", file_get_contents($controllerFile), $matches);
+            foreach ($matches[1] as $match) {
+                $dat = array();
+                $dat["name"] = strtolower(preg_replace("/[A-Z]/","-\\0", $match));
+                $actions[] = $dat;
+            }
+        }
+
+        $this->_helper->json(array(
+            "data" => $actions
+        ));
+    }
+
+    public function getAvailableTemplatesAction () {
+
+        $templates = array();
+        $viewPath = PIMCORE_WEBSITE_PATH . "/views/scripts";
+        $files = rscandir($viewPath . "/");
+        foreach ($files as $file) {
+            $dat = array();
+            if(strpos($file, Pimcore_View::getViewScriptSuffix()) !== false) {
+                $dat["path"] = str_replace($viewPath, "", $file);
+                $templates[] = $dat;
+            }
+        }
+
+        $this->_helper->json(array(
+            "data" => $templates
+        ));
+    }
 }

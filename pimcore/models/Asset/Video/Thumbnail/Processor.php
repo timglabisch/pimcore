@@ -1,4 +1,4 @@
-<?php 
+<?php
 /**
  * Pimcore
  *
@@ -9,6 +9,8 @@
  * It is also available through the world-wide-web at this URL:
  * http://www.pimcore.org/license
  *
+ * @category   Pimcore
+ * @package    Asset
  * @copyright  Copyright (c) 2009-2010 elements.at New Media Solutions GmbH (http://www.elements.at)
  * @license    http://www.pimcore.org/license     New BSD License
  */
@@ -88,6 +90,8 @@ class Asset_Video_Thumbnail_Processor {
                 } else {
                     return;
                 }
+            } else if($customSetting[$config->getName()]["status"] == "error") {
+                throw new Exception("Unable to convert video, see logs for details.");
             }
         }
 
@@ -158,6 +162,7 @@ class Asset_Video_Thumbnail_Processor {
         $instance = Pimcore_Tool_Serialize::unserialize(file_get_contents($instance->getJobFile()));
         $formats = array();
         $overallStatus = array();
+        $conversionStatus = "finished";
 
         // set overall status for all formats to 0
         foreach ($instance->queue as $converter) {
@@ -193,6 +198,8 @@ class Asset_Video_Thumbnail_Processor {
 
                 if($converter->getConversionStatus() !== "error") {
                     $formats[$converter->getFormat()] = str_replace(PIMCORE_DOCUMENT_ROOT, "", $converter->getDestinationFile());
+                } else {
+                    $conversionStatus = "error";
                 }
 
                 $converter->destroy();
@@ -216,7 +223,7 @@ class Asset_Video_Thumbnail_Processor {
             }
 
             $customSetting[$instance->getConfig()->getName()] = array(
-                "status" => "finished",
+                "status" => $conversionStatus,
                 "formats" => $formats
             );
             $asset->setCustomSetting("thumbnails", $customSetting);
@@ -247,7 +254,7 @@ class Asset_Video_Thumbnail_Processor {
      */
     public function convert() {
         $this->save();
-        $cmd = Pimcore_Tool_Console::getPhpCli() . " " . PIMCORE_PATH . DIRECTORY_SEPARATOR . "cli" . DIRECTORY_SEPARATOR . "video-converter.php " . $this->getProcessId();
+        $cmd = Pimcore_Tool_Console::getPhpCli() . " " . realpath(PIMCORE_PATH . DIRECTORY_SEPARATOR . "cli" . DIRECTORY_SEPARATOR . "video-converter.php"). " " . $this->getProcessId();
         Pimcore_Tool_Console::execInBackground($cmd);
     }
 

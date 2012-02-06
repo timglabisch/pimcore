@@ -10,7 +10,7 @@
  * http://www.pimcore.org/license
  *
  * @category   Pimcore
- * @package    Document
+ * @package    Object
  * @copyright  Copyright (c) 2009-2010 elements.at New Media Solutions GmbH (http://www.elements.at)
  * @license    http://www.pimcore.org/license     New BSD License
  */
@@ -177,7 +177,6 @@ class Object_Service extends Element_Service {
         $new->setKey($target->getKey());
         $new->setParentId($target->getParentId());
         $new->setScheduledTasks($source->getScheduledTasks());
-        $new->setPermissions($source->getPermissions());
         $new->setProperties($source->getProperties());
 
         $new->save();
@@ -197,6 +196,7 @@ class Object_Service extends Element_Service {
 
         if ($object instanceof Object_Concrete) {
             $data["classname"] = $object->geto_ClassName();
+            $data["idPath"] = Pimcore_Tool::getIdPathForElement($object);
             $data['inheritedFields'] = array();
 
             if(empty($fields)) {
@@ -243,7 +243,7 @@ class Object_Service extends Element_Service {
 
                         if(method_exists($def, "getDataForGrid")) {
                             $tempData = $def->getDataForGrid($valueObject->value, $object);
-                            if(is_object($tempData)) {
+                            if($def instanceof Object_Class_Data_Localizedfields) {
                                 foreach($tempData as $tempKey => $tempValue) {
                                     $data[$tempKey] = $tempValue;
                                 }

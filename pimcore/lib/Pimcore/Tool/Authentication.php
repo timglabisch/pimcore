@@ -15,7 +15,6 @@
 
 class Pimcore_Tool_Authentication {
 
-
     /**
      * @static
      * @throws Exception
@@ -29,10 +28,16 @@ class Pimcore_Tool_Authentication {
         // get session namespace
         $adminSession = new Zend_Session_Namespace("pimcore_admin");
 
-        $thawedUser = User::thaw($adminSession->frozenuser);
-        if ($thawedUser instanceof User) {
-            return $thawedUser;
+        $user = $adminSession->user;
+        if ($user instanceof User) {
+            // renew user
+            $user = User::getById($user->getId());
+            if($user && $user->isActive()) {
+                return $user;
+            }
         }
+
+        return null;
     }
 
     /**
@@ -77,7 +82,6 @@ class Pimcore_Tool_Authentication {
         }
     }
 
-
     /**
      * @static
      * @return void
@@ -94,16 +98,9 @@ class Pimcore_Tool_Authentication {
 
         try {
             // register session
-            $front = Zend_Controller_Front::getInstance();
-            if ($front->getRequest() != null && $front->getRequest()->getParam("pimcore_admin_sid")) {
-                // hack to get zend_session work with session-id via get (since SwfUpload doesn't support cookies)
-                $_REQUEST["pimcore_admin_sid"] = $front->getRequest()->getParam("pimcore_admin_sid");
-                $_COOKIE["pimcore_admin_sid"] = $front->getRequest()->getParam("pimcore_admin_sid");
-            }
-            if (!empty($_GET["pimcore_admin_sid"])) {
-                // hack to get zend_session work with session-id via get (since SwfUpload doesn't support cookies)
-                $_REQUEST["pimcore_admin_sid"] = $_GET["pimcore_admin_sid"];
-                $_COOKIE["pimcore_admin_sid"] = $_GET["pimcore_admin_sid"];
+            if (array_key_exists("pimcore_admin_sid", $_GET) && !empty($_GET["pimcore_admin_sid"])) {
+                // get zend_session work with session-id via get (since SwfUpload doesn't support cookies)
+                Zend_Session::setId($_GET["pimcore_admin_sid"]);
             }
 
             try {
@@ -115,7 +112,6 @@ class Pimcore_Tool_Authentication {
                 Logger::error("Problem while starting session");
                 Logger::error($e);
             }
-
         }
         catch (Exception $e) {
             Logger::emergency("there is a problem with admin session");
@@ -178,6 +174,7 @@ class Pimcore_Tool_Authentication {
      * @return  string
      */
     protected static function hex2str($hex) {
+        $str = "";
         for ($i = 0; $i < strlen($hex); $i += 2) {
             $str .= chr(hexdec(substr($hex, $i, 2)));
         }

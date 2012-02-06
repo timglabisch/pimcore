@@ -29,6 +29,7 @@ pimcore.helpers.openAsset = function (id, type) {
             pimcore.globalmanager.add("asset_" + id, new pimcore.asset[type](id));
         }
 
+        pimcore.helpers.rememberOpenTab("asset_" + id + "_" + type);
     }
     else {
         pimcore.globalmanager.get("asset_" + id).activate();
@@ -50,6 +51,7 @@ pimcore.helpers.openDocument = function (id, type) {
         if (pimcore.document[type]) {
             pimcore.helpers.addTreeNodeLoadingIndicator("document", id);
             pimcore.globalmanager.add("document_" + id, new pimcore.document[type](id));
+            pimcore.helpers.rememberOpenTab("document_" + id + "_" + type);
         }
     }
     else {
@@ -77,6 +79,7 @@ pimcore.helpers.openObject = function (id, type) {
         }
 
         pimcore.globalmanager.add("object_" + id, new pimcore.object[type](id));
+        pimcore.helpers.rememberOpenTab("object_" + id + "_" + type);
     }
     else {
         var tab = pimcore.globalmanager.get("object_" + id);
@@ -311,7 +314,7 @@ pimcore.helpers.lockManager = function (cid, ctype, csubtype, data) {
     
     var lockDate = new Date(data.editlock.date * 1000);
     var lockDetails = "<br /><br />";
-    lockDetails += "<b>" + t("user") + ":</b> " + data.editlock.user.username + "<br />";
+    lockDetails += "<b>" + t("user") + ":</b> " + data.editlock.user.name + "<br />";
     lockDetails += "<b>" + t("since") + ": </b>" + Ext.util.Format.date(lockDate);
     lockDetails += "<br /><br />" + t("element_lock_question");
 
@@ -405,6 +408,431 @@ pimcore.helpers.download = function (url) {
 pimcore.helpers.getFileExtension = function (filename) {
     var extensionP = filename.split("\.");
     return extensionP[extensionP.length - 1];
+}
+
+
+pimcore.helpers.deleteAsset = function (id, callback) {
+    // check for dependencies
+    Ext.Ajax.request({
+        url: "/admin/asset/delete-info/",
+        params: {id: id},
+        success: pimcore.helpers.deleteAssetCheckDependencyComplete.bind(window, id, callback)
+    });
+};
+
+pimcore.helpers.deleteAssetCheckDependencyComplete = function (id, callback, response) {
+
+    try {
+        var res = Ext.decode(response.responseText);
+        var message = t('delete_message');
+        if (res.hasDependencies) {
+            message = t('delete_message_dependencies');
+        }
+        Ext.MessageBox.show({
+            title:t('delete'),
+            msg: message,
+            buttons: Ext.Msg.OKCANCEL ,
+            icon: Ext.MessageBox.INFO ,
+            fn: pimcore.helpers.deleteAssetFromServer.bind(window, id, res, callback)
+        });
+    }
+    catch (e) {
+    }
+};
+
+pimcore.helpers.deleteAssetFromServer = function (id, r, callback, button) {
+
+    if (button == "ok" && r.deletejobs) {
+
+        var node = pimcore.globalmanager.get("layout_asset_tree").tree.getNodeById(id);
+        pimcore.helpers.addTreeNodeLoadingIndicator("asset", id);
+
+        if(node) {
+            node.getUI().addClass("pimcore_delete");
+        }
+        /*this.originalClass = Ext.get(this.getUI().getIconEl()).getAttribute("class");
+         Ext.get(this.getUI().getIconEl()).dom.setAttribute("class", "x-tree-node-icon pimcore_icon_loading");*/
+
+
+        if (pimcore.globalmanager.exists("asset_" + id)) {
+            var tabPanel = Ext.getCmp("pimcore_panel_tabs");
+            tabPanel.remove("asset_" + id);
+        }
+
+        if(r.deletejobs.length > 2) {
+            this.deleteProgressBar = new Ext.ProgressBar({
+                text: t('initializing')
+            });
+
+            this.deleteWindow = new Ext.Window({
+                title: t("delete"),
+                layout:'fit',
+                width:500,
+                bodyStyle: "padding: 10px;",
+                closable:false,
+                plain: true,
+                modal: true,
+                items: [this.deleteProgressBar]
+            });
+
+            this.deleteWindow.show();
+        }
+
+
+        var pj = new pimcore.tool.paralleljobs({
+            success: function (id, callback) {
+
+                var node = pimcore.globalmanager.get("layout_asset_tree").tree.getNodeById(id);
+                try {
+                    if(node) {
+                        node.getUI().removeClass("pimcore_delete");
+                    }
+                    //Ext.get(this.getUI().getIconEl()).dom.setAttribute("class", this.originalClass);
+                    pimcore.helpers.removeTreeNodeLoadingIndicator("asset", id);
+
+                    if(node) {
+                        node.remove();
+                    }
+                } catch(e) {
+                    console.log(e);
+                    pimcore.helpers.showNotification(t("error"), t("there_was_a_problem_during_deleting"), "error");
+                    if(node) {
+                        node.parentNode.reload();
+                    }
+                }
+
+                if(this.deleteWindow) {
+                    this.deleteWindow.close();
+                }
+
+                this.deleteProgressBar = null;
+                this.deleteWindow = null;
+
+                if(typeof callback == "function") {
+                    callback();
+                }
+            }.bind(this, id, callback),
+            update: function (currentStep, steps, percent) {
+                if(this.deleteProgressBar) {
+                    var status = currentStep / steps;
+                    this.deleteProgressBar.updateProgress(status, percent + "%");
+                }
+            }.bind(this),
+            failure: function (id, message) {
+                this.deleteWindow.close();
+
+                pimcore.helpers.showNotification(t("error"), t("there_was_a_problem_during_deleting"), "error", t(message));
+
+                var node = pimcore.globalmanager.get("layout_asset_tree").tree.getNodeById(id);
+                if(node) {
+                    node.parentNode.reload();
+                }
+            }.bind(this, id),
+            jobs: r.deletejobs
+        });
+    }
+};
+
+
+
+pimcore.helpers.deleteDocument = function (id, callback) {
+
+    // check for dependencies
+    Ext.Ajax.request({
+        url: "/admin/document/delete-info/",
+        params: {id: id},
+        success: pimcore.helpers.deleteDocumentCheckDependencyComplete.bind(window, id, callback)
+    });
+};
+
+pimcore.helpers.deleteDocumentCheckDependencyComplete = function (id, callback, response) {
+
+    try {
+        var res = Ext.decode(response.responseText);
+        var message = t('delete_message');
+        if (res.hasDependencies) {
+            message = t('delete_message_dependencies');
+        }
+        Ext.MessageBox.show({
+            title:t('delete'),
+            msg: message,
+            buttons: Ext.Msg.OKCANCEL ,
+            icon: Ext.MessageBox.INFO ,
+            fn: pimcore.helpers.deleteDocumentFromServer.bind(window, id, res, callback)
+        });
+    }
+    catch (e) {
+        console.log(e);
+    }
+};
+
+pimcore.helpers.deleteDocumentFromServer = function (id, r, callback, button) {
+
+    if (button == "ok" && r.deletejobs) {
+        var node = pimcore.globalmanager.get("layout_document_tree").tree.getNodeById(id);
+        pimcore.helpers.addTreeNodeLoadingIndicator("document", id);
+
+        if(node) {
+            node.getUI().addClass("pimcore_delete");
+        }
+        /*this.originalClass = Ext.get(this.getUI().getIconEl()).getAttribute("class");
+         Ext.get(this.getUI().getIconEl()).dom.setAttribute("class", "x-tree-node-icon pimcore_icon_loading");*/
+
+
+        if (pimcore.globalmanager.exists("document_" + id)) {
+            var tabPanel = Ext.getCmp("pimcore_panel_tabs");
+            tabPanel.remove("document_" + id);
+        }
+
+        if(r.deletejobs.length > 2) {
+            this.deleteProgressBar = new Ext.ProgressBar({
+                text: t('initializing')
+            });
+
+            this.deleteWindow = new Ext.Window({
+                title: t("delete"),
+                layout:'fit',
+                width:500,
+                bodyStyle: "padding: 10px;",
+                closable:false,
+                plain: true,
+                modal: true,
+                items: [this.deleteProgressBar]
+            });
+
+            this.deleteWindow.show();
+        }
+
+
+        var pj = new pimcore.tool.paralleljobs({
+            success: function (id, callback) {
+
+                var node = pimcore.globalmanager.get("layout_document_tree").tree.getNodeById(id);
+                try {
+                    if(node) {
+                        node.getUI().removeClass("pimcore_delete");
+                    }
+                    //Ext.get(this.getUI().getIconEl()).dom.setAttribute("class", this.originalClass);
+                    pimcore.helpers.removeTreeNodeLoadingIndicator("document", id);
+
+                    if(node) {
+                        node.remove();
+                    }
+                } catch(e) {
+                    console.log(e);
+                    pimcore.helpers.showNotification(t("error"), t("error_deleting_document"), "error");
+
+                    if(node) {
+                        node.parentNode.reload();
+                    }
+                }
+
+                if(this.deleteWindow) {
+                    this.deleteWindow.close();
+                }
+
+                this.deleteProgressBar = null;
+                this.deleteWindow = null;
+
+                if(typeof callback == "function") {
+                    callback();
+                }
+            }.bind(this, id, callback),
+            update: function (currentStep, steps, percent) {
+                if(this.deleteProgressBar) {
+                    var status = currentStep / steps;
+                    this.deleteProgressBar.updateProgress(status, percent + "%");
+                }
+            }.bind(this),
+            failure: function (message) {
+                this.deleteWindow.close();
+
+                pimcore.helpers.showNotification(t("error"), t("error_deleting_document"), "error", t(message));
+
+                var node = pimcore.globalmanager.get("layout_document_tree").tree.getNodeById(id);
+                if(node) {
+                    node.parentNode.reload();
+                }
+            }.bind(this, id),
+            jobs: r.deletejobs
+        });
+    }
+};
+
+
+pimcore.helpers.deleteObject = function (id, callback) {
+
+    // check for dependencies
+    Ext.Ajax.request({
+        url: "/admin/object/delete-info/",
+        params: {id: id},
+        success: pimcore.helpers.deleteObjectCheckDependencyComplete.bind(window, id, callback)
+    });
+};
+
+pimcore.helpers.deleteObjectCheckDependencyComplete = function (id, callback, response) {
+
+    try {
+        var res = Ext.decode(response.responseText);
+        var message = t('delete_message');
+        if (res.hasDependencies) {
+            var message = t('delete_message_dependencies');
+        }
+        Ext.MessageBox.show({
+            title:t('delete'),
+            msg: message,
+            buttons: Ext.Msg.OKCANCEL ,
+            icon: Ext.MessageBox.INFO ,
+            fn: pimcore.helpers.deleteObjectFromServer.bind(window, id, res, callback)
+        });
+    }
+    catch (e) {
+    }
+};
+
+pimcore.helpers.deleteObjectFromServer = function (id, r, callback, button) {
+
+    if (button == "ok" && r.deletejobs) {
+
+        var node = pimcore.globalmanager.get("layout_object_tree").tree.getNodeById(id);
+        pimcore.helpers.addTreeNodeLoadingIndicator("object", id);
+
+        if(node) {
+            node.getUI().addClass("pimcore_delete");
+        }
+        /*this.originalClass = Ext.get(this.getUI().getIconEl()).getAttribute("class");
+         Ext.get(this.getUI().getIconEl()).dom.setAttribute("class", "x-tree-node-icon pimcore_icon_loading");*/
+
+
+        if (pimcore.globalmanager.exists("object_" + id)) {
+            var tabPanel = Ext.getCmp("pimcore_panel_tabs");
+            tabPanel.remove("object_" + id);
+        }
+
+        if(r.deletejobs.length > 2) {
+            this.deleteProgressBar = new Ext.ProgressBar({
+                text: t('initializing')
+            });
+
+            this.deleteWindow = new Ext.Window({
+                title: t("delete"),
+                layout:'fit',
+                width:500,
+                bodyStyle: "padding: 10px;",
+                closable:false,
+                plain: true,
+                modal: true,
+                items: [this.deleteProgressBar]
+            });
+
+            this.deleteWindow.show();
+        }
+
+
+        var pj = new pimcore.tool.paralleljobs({
+            success: function (id, callback) {
+
+                var node = pimcore.globalmanager.get("layout_object_tree").tree.getNodeById(id);
+                try {
+                    if(node) {
+                        node.getUI().removeClass("pimcore_delete");
+                    }
+                    //Ext.get(this.getUI().getIconEl()).dom.setAttribute("class", this.originalClass);
+                    pimcore.helpers.removeTreeNodeLoadingIndicator("object", id);
+
+                    if(node) {
+                        node.remove();
+                    }
+                } catch(e) {
+                    console.log(e);
+                    pimcore.helpers.showNotification(t("error"), t("error_deleting_object"), "error");
+                    if(node) {
+                        node.parentNode.reload();
+                    }
+                }
+
+                if(this.deleteWindow) {
+                    this.deleteWindow.close();
+                }
+
+                this.deleteProgressBar = null;
+                this.deleteWindow = null;
+
+                if(typeof callback == "function") {
+                    callback();
+                }
+            }.bind(this, id, callback),
+            update: function (currentStep, steps, percent) {
+                if(this.deleteProgressBar) {
+                    var status = currentStep / steps;
+                    this.deleteProgressBar.updateProgress(status, percent + "%");
+                }
+            }.bind(this),
+            failure: function (id, message) {
+                this.deleteWindow.close();
+
+                pimcore.helpers.showNotification(t("error"), t("error_deleting_object"), "error", t(message));
+
+                var node = pimcore.globalmanager.get("layout_object_tree").tree.getNodeById(id);
+                if(node) {
+                    node.parentNode.reload();
+                }
+            }.bind(this, id),
+            jobs: r.deletejobs
+        });
+    }
+};
+
+pimcore.helpers.rememberOpenTab = function (item) {
+    var openTabsCsv = Ext.util.Cookies.get("pimcore_opentabs");
+    var openTabs = [];
+    if(openTabsCsv) {
+        openTabs = openTabsCsv.split(",");
+    }
+
+    if(!in_array(item, openTabs)) {
+        openTabs.push(item);
+    }
+
+    Ext.util.Cookies.set("pimcore_opentabs", "," + openTabs.join(",") + ",");
+}
+
+pimcore.helpers.forgetOpenTab = function (item) {
+    var openTabsCsv = Ext.util.Cookies.get("pimcore_opentabs");
+    if(openTabsCsv) {
+        openTabsCsv = str_replace("," + item + ",", "", openTabsCsv);
+    }
+    Ext.util.Cookies.set("pimcore_opentabs", openTabsCsv);
+}
+
+pimcore.helpers.openMemorizedTabs = function () {
+    var openTabsCsv = Ext.util.Cookies.get("pimcore_opentabs");
+    var openTabs = [];
+    var parts = [];
+    var openedTabs = [];
+    if(openTabsCsv) {
+        openTabs = openTabsCsv.split(",");
+    }
+
+    for(var i=0; i<openTabs.length; i++) {
+        if(!empty(openTabs[i])) {
+            if(!in_array(openTabs[i], openedTabs)) {
+                parts = openTabs[i].split("_");
+                window.setTimeout(function (parts) {
+                    if(parts[1] && parts[2]) {
+                        if(parts[0] == "asset") {
+                            pimcore.helpers.openAsset(parts[1], parts[2]);
+                        } else if(parts[0] == "document") {
+                            pimcore.helpers.openDocument(parts[1], parts[2]);
+                        } else if(parts[0] == "object") {
+                            pimcore.helpers.openObject(parts[1], parts[2]);
+                        }
+                    }
+                }.bind(this, parts), 200);
+            }
+            openedTabs.push(openTabs[i]);
+        }
+    }
 }
 
 

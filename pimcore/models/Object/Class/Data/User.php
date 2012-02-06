@@ -29,14 +29,14 @@ class Object_Class_Data_User extends Object_Class_Data_Select {
 
         $list = new User_List();
         $list->setOrder("asc");
-        $list->setOrderKey("username");
+        $list->setOrderKey("name");
         $users = $list->load();
 
         $options = array();
         if (is_array($users) and count($users) > 0) {
             foreach ($users as $user) {
-                if ($user->getHasCredentials()) {
-                    $value = $user->getUsername();
+                if($user instanceof User) {
+                    $value = $user->getName();
                     $first = $user->getFirstname();
                     $last = $user->getLastname();
                     if (!empty($first) or !empty($last)) {

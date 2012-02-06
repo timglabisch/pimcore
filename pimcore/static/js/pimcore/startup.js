@@ -38,6 +38,7 @@ Ext.onReady(function() {
     }
 
     // define some globals
+    Ext.chart.Chart.CHART_URL = '/pimcore/static/js/lib/ext/resources/charts.swf';
     Ext.QuickTips.init();
     Ext.Ajax.method = "get";
     Ext.Ajax.timeout = 900000;
@@ -251,12 +252,12 @@ Ext.onReady(function() {
     // check for updates
     window.setTimeout(function () {
         var script = document.createElement("script");
-        script.src = "http://update.pimcore.org/v2/statusbarUpdateCheck.php?revision=" + pimcore.settings.build;
+        script.src = "https://www.pimcore.org/update/v2/statusbarUpdateCheck.php?revision=" + pimcore.settings.build;
         script.type = "text/javascript";
         Ext.query("body")[0].appendChild(script);
     }, 5000);
-    
-    
+
+
     // remove loading
     Ext.get("pimcore_loading").remove();
 
@@ -280,12 +281,13 @@ Ext.onReady(function() {
                     items: [
                         {
                             region:'west',
-                            id:'pimcore_panel_tree',
+                            id:'pimcore_panel_tree_left',
                             split:true,
                             width: 250,
                             minSize: 175,
                             maxSize: 400,
                             collapsible: true,
+                            animCollapse: false,
                             layout:'accordion',
                             layoutConfig:{
                                 animate:false
@@ -299,9 +301,28 @@ Ext.onReady(function() {
                             deferredRender:false,
                             id: "pimcore_panel_tabs",
                             enableTabScroll:true,
+                            hideMode: "offsets",
                             defaults: {autoScroll:true},
                             cls: "tab_panel"
-                        })
+                        }),{
+                            region:'east',
+                            id:'pimcore_panel_tree_right',
+                            split:true,
+                            width: 250,
+                            minSize: 175,
+                            maxSize: 400,
+                            collapsible: true,
+                            collapsed: true,
+                            animCollapse: false,
+                            layout:'accordion',
+                            hidden: true,
+                            layoutConfig:{
+                                animate:false
+                            },
+                            forceLayout: true,
+                            hideMode: "offsets",
+                            items: []
+                        }
                     ],
                     bbar: statusbar
                 }
@@ -317,9 +338,16 @@ Ext.onReady(function() {
             }
         });
 
+        // open previous opened tabs after the trees are ready
+        pimcore.layout.treepanelmanager.addOnReadyCallback(function () {
+            window.setTimeout(function () {
+                pimcore.helpers.openMemorizedTabs();
+            }, 500);
+        });
+
         // add sidebar panels
         var user = pimcore.globalmanager.get("user");
-        var treepanel = Ext.getCmp("pimcore_panel_tree");
+        var treepanel = Ext.getCmp("pimcore_panel_tree_left");
         
         if (user.isAllowed("documents")) {
             layoutDocumentTree = new pimcore.document.tree();
@@ -348,7 +376,7 @@ Ext.onReady(function() {
                             treeId: "pimcore_panel_tree_customviews_" + cv.id,
                             treeIconCls: "pimcore_object_customviews_icon_" + cv.id,
                             treeTitle: ts(cv.name),
-                            parentPanel: Ext.getCmp("pimcore_panel_tree"),
+                            parentPanel: Ext.getCmp("pimcore_panel_tree_left"),
                             index: (cvs+10),
                             loaderBaseParams: {}
                         });
@@ -372,7 +400,7 @@ Ext.onReady(function() {
     }
 
     
-    if (pimcore.settings.welcomescreen) {
+    if (pimcore.globalmanager.get("user").welcomescreen) {
         layoutPortal = new pimcore.layout.portal();
         pimcore.globalmanager.add("layout_portal", layoutPortal);
     }

@@ -30,9 +30,7 @@ pimcore.document.link = Class.create(pimcore.document.document, {
         if (this.isAllowed("properties")) {
             this.properties = new pimcore.document.properties(this, "document");
         }
-        if (this.isAllowed("permissions")) {
-            this.permissions = new pimcore.document.permissions(this);
-        }
+
         this.dependencies = new pimcore.element.dependencies(this, "document");
     },
 
@@ -88,6 +86,7 @@ pimcore.document.link = Class.create(pimcore.document.document, {
         // remove this instance when the panel is closed
         this.tab.on("destroy", function () {
             pimcore.globalmanager.remove("document_" + this.id);
+            pimcore.helpers.forgetOpenTab("document_" + this.id + "_link");
         }.bind(this));
 
         this.tab.on("activate", function () {
@@ -129,12 +128,12 @@ pimcore.document.link = Class.create(pimcore.document.document, {
                 handler: this.unpublish.bind(this)
             });
 
-            /*this.toolbarButtons.remove = new Ext.Button({
-             text: t('delete'),
-             iconCls: "pimcore_icon_delete_medium",
-             scale: "medium",
-             handler: this.remove.bind(this)
-             });*/
+            this.toolbarButtons.remove = new Ext.Button({
+                text: t('delete'),
+                iconCls: "pimcore_icon_delete_medium",
+                scale: "medium",
+                handler: this.remove.bind(this)
+            });
 
 
             var buttons = [];
@@ -155,9 +154,9 @@ pimcore.document.link = Class.create(pimcore.document.document, {
             buttons.push("-");
             buttons.push(this.toolbarButtons.reload);
 
-            /*if(this.isAllowed("delete")) {
-             buttons.push(this.toolbarButtons.remove);
-             }*/
+            if(this.isAllowed("delete")) {
+                buttons.push(this.toolbarButtons.remove);
+            }
 
             this.toolbar = new Ext.Toolbar({
                 id: "document_toolbar_" + this.id,
@@ -193,9 +192,7 @@ pimcore.document.link = Class.create(pimcore.document.document, {
         if (this.isAllowed("properties")) {
             items.push(this.properties.getLayout());
         }
-        if (this.isAllowed("permissions")) {
-            items.push(this.permissions.getLayout());
-        }
+
         items.push(this.dependencies.getLayout());
         
         this.tabbar = new Ext.TabPanel({

@@ -15,38 +15,15 @@
  * @license    http://www.pimcore.org/license     New BSD License
  */
 
-class User_List extends Pimcore_Model_List_Abstract {
+class User_List extends User_List_Abstract {
+
+    public $type = "user";
 
     /**
-     * Contains the results of the list. They are all an instance of User
-     *
-     * @var array
-     */
-    public $users = array();
-
-    /**
-     * Tests if the given key is an valid order key to sort the results
-     *
-     * @todo remove the dummy-always-true rule
-     * @return boolean
-     */
-    public function isValidOrderKey($key) {
-        return true;
-    }
-
-    /**
+     * Alias for $this->getItems()
      * @return array
      */
     public function getUsers() {
-        return $this->users;
+        return $this->getItems();
     }
-
-    /**
-     * @param array $thumbnails
-     * @return void
-     */
-    public function setUsers($users) {
-        $this->users = $users;
-    }
-
 }

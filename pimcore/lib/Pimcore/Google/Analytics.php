@@ -23,32 +23,10 @@ class Pimcore_Google_Analytics {
         }
         return false;
     }
-    
-    public static function getSiteKey (Site $site = null) {
 
-        if($site) {
-            $siteKey = "site_" . $site->getId();
-        }
-        else {
-            $siteKey = "default";
-        }
-        
-        return $siteKey;
-    }
-    
     public static function getSiteConfig ($site = null) {
         
-        // check for site
-        if(!$site) {
-            try {
-                $site = Zend_Registry::get("pimcore_site");
-            }
-            catch (Exception $e) {
-                $site = null;
-            }
-        }
-        
-        $siteKey = self::getSiteKey($site);
+        $siteKey = Pimcore_Tool_Frontend::getSiteKey($site);
         
         if(Pimcore_Config::getReportConfig()->analytics->sites->$siteKey) {
             return Pimcore_Config::getReportConfig()->analytics->sites->$siteKey;
@@ -90,6 +68,8 @@ class Pimcore_Google_Analytics {
               } else {
                 _gaq.push(['_trackPageview']);
               }
+
+              " . $config->additionalcode . "
             
               (function() {
                 var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;

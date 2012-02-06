@@ -38,6 +38,11 @@ class Object_Class_Data_Multihref extends Object_Class_Data_Relations_Abstract
     public $height;
 
     /**
+     * @var int
+     */
+    public $maxItems;
+
+    /**
      * Type for the column to query
      *
      * @var string
@@ -375,8 +380,9 @@ class Object_Class_Data_Multihref extends Object_Class_Data_Relations_Abstract
 
         if (is_array($data) && count($data) > 0) {
             foreach ($data as $e) {
-
-                $pathes[] = get_class($e) . $e->getFullPath();
+                if($e instanceof Element_Interface) {
+                    $pathes[] = get_class($e) . $e->getFullPath();
+                }
             }
             return implode("<br />", $pathes);
         }
@@ -659,5 +665,21 @@ class Object_Class_Data_Multihref extends Object_Class_Data_Relations_Abstract
         }
 
         return $data;
+    }
+
+    /**
+     * @param int $maxItems
+     */
+    public function setMaxItems($maxItems)
+    {
+        $this->maxItems = $maxItems;
+    }
+
+    /**
+     * @return int
+     */
+    public function getMaxItems()
+    {
+        return $this->maxItems;
     }
 }

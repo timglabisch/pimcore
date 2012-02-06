@@ -36,32 +36,6 @@ class Admin_AssetController extends Pimcore_Controller_Action_Admin {
         $this->_assetService = new Asset_Service($this->getUser());
     }
 
-    public function getUserPermissionsAction() {
-
-        $asset = Asset::getById($this->_getParam("asset"));
-
-        $list = new User_List();
-        $list->load();
-        $users = $list->getUsers();
-        if (!empty($users)) {
-            foreach ($users as $user) {
-                $permission = $asset->getUserPermissions($user);
-                $permission->setUser($user);
-                $permission->setUserId($user->getId());
-                $permission->setUsername($user->getUsername());
-                $permissions[] = $permission;
-            }
-        }
-
-        $asset->getPermissionsForUser($this->getUser());
-        if ($asset->isAllowed("view")) {
-            $this->_helper->json(array("permissions" => $permissions));
-        }
-
-        $this->_helper->json(array("success" => false, "message" => "missing_permission"));
-    }
-
-
     public function getDataByIdAction() {
 
         // check for lock
@@ -73,12 +47,11 @@ class Admin_AssetController extends Pimcore_Controller_Action_Admin {
         Element_Editlock::lock($this->_getParam("id"), "asset");
 
         $asset = Asset::getById(intval($this->_getParam("id")));
-
-        $asset->getPermissionsForUser($this->getUser());
         $asset->setProperties(Element_Service::minimizePropertiesForEditmode($asset->getProperties()));
         $asset->getVersions();
         $asset->getScheduledTasks();
         $asset->idPath = Pimcore_Tool::getIdPathForElement($asset);
+        $asset->userPermissions = $asset->getUserPermissions();
 
         if ($asset instanceof Asset_Text) {
             $asset->getData();
@@ -148,7 +121,6 @@ class Admin_AssetController extends Pimcore_Controller_Action_Admin {
         }
 
         $root = Asset::getById($id);
-        $root->getPermissionsForUser($this->getUser());
         if ($root->isAllowed("list")) {
             $this->_helper->json($this->getTreeNodeConfig($root));
         }
@@ -181,9 +153,6 @@ class Admin_AssetController extends Pimcore_Controller_Action_Admin {
             $childs = $childsList->load();
 
             foreach ($childs as $childAsset) {
-
-                $childAsset->getPermissionsForUser($this->getUser());
-
                 if ($childAsset->isAllowed("list")) {
                     $assets[] = $this->getTreeNodeConfig($childAsset);
                 }
@@ -202,191 +171,6 @@ class Admin_AssetController extends Pimcore_Controller_Action_Admin {
         }
 
         $this->_helper->json(false);
-    }
-
-    public function getTreePermissionsAction() {
-
-        $this->removeViewRenderer();
-        $user = User::getById($this->_getParam("user"));
-
-        if ($this->_getParam("xaction") == "update") {
-            $data = json_decode($this->_getParam("data"));
-            if (!empty($data->id)) {
-                $nodes[] = $data;
-            } else {
-                $nodes = $data;
-            }
-            //loop through store nodes  = assets to edit
-            if (is_array($nodes)) {
-
-                foreach ($nodes as $node) {
-                    $asset = Asset::getById($node->id);
-                    $parent = Asset::getById($asset->getParentId());
-                    $assetPermission = $asset->getPermissionsForUser($user);
-                    if ($assetPermission instanceof Asset_Permissions) {
-                        $found = true;
-                        if (!$node->permissionSet) {
-                            //reset permission by deleting it
-                            if($assetPermission->getCid() == $asset->getId()){
-                                $assetPermission->delete();
-                                $permissions = $asset->getPermissions();
-                            }
-                            break;
-
-                        } else {
-
-                            if ($assetPermission->getCid() != $asset->getId() or $assetPermission->getUser()->getId() != $user->getId()) {
-                                //we got a parent's permission create new permission
-                                //or we got a usergroup permission, create a new permission for specific user
-                                $assetPermission = new Asset_Permissions();
-                                $assetPermission->setUser($user);
-                                $assetPermission->setUserId($user->getId());
-                                $assetPermission->setUsername($user->getUsername());
-                                $assetPermission->setCid($asset->getId());
-                                $assetPermission->setCpath($asset->getFullPath());
-                            }
-
-                            //update asset_permissions
-                            $doSave = true;
-                            $permissionNames = $assetPermission->getValidPermissionKeys();
-                            foreach ($permissionNames as $name) {
-                                //check if parent allows list
-                                if ($parent) {
-                                    $parent->getPermissionsForUser($user);
-                                    $parentList = $parent->isAllowed("list");
-                                } else {
-                                    $parentList = true;
-                                }
-                                $setterName = "set" . ucfirst($name);
-
-                                if (isset($node->$name) and $node->$name and $parentList) {
-                                    $assetPermission->$setterName(true);
-                                } else if (isset($node->$name)) {
-                                    $assetPermission->$setterName(false);
-                                    //if no list permission set all to false
-                                    if ($name == "list") {
-
-                                        foreach ($permissionNames as $n) {
-                                            $setterName = "set" . ucfirst($n);
-                                            $assetPermission->$setterName(false);
-                                        }
-                                        break;
-                                    }
-                                }
-                            }
-
-                            $assetPermission->save();
-
-                            if ($node->evictChildrenPermissions) {
-
-                                $successorList = new Asset_List();
-                                $successorList->setOrderKey("filename");
-                                $successorList->setOrder("asc");
-                                if ($asset->getParentId() < 1) {
-                                    $successorList->setCondition("parentId > 0");
-
-                                } else {
-                                    $successorList->setCondition("path like '" . $asset->getFullPath() . "/%'");
-                                }
-                                Logger::debug($successorList->getCondition());
-                                $successors = $successorList->load();
-                                foreach ($successors as $successor) {
-
-                                    $permission = $successor->getPermissionsForUser($user);
-                                    if ($permission->getId() > 0 and $permission->getCid() == $successor->getId()) {
-                                        $permission->delete();
-
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                $this->_helper->json(array(
-                    "success" => true
-                ));
-            }
-        } else if ($this->_getParam("xaction") == "destroy") {
-            //ignore    
-        } else {
-            //read
-            if ($user instanceof User) {
-                $userPermissionsNamespace = new Zend_Session_Namespace('assetUserPermissions');
-                if (!isset($userPermissionsNamespace->expandedNodes) or $userPermissionsNamespace->currentUser != $user->getId()) {
-                    $userPermissionsNamespace->currentUser = $user->getId();
-                    $userPermissionsNamespace->expandedNodes = array();
-                }
-                if (is_numeric($this->_getParam("anode")) and $this->_getParam("anode") > 0) {
-                    $node = $this->_getParam("anode");
-                    $asset = Asset::getById($node);
-
-                    if ($user instanceof User and $asset->hasChilds()) {
-
-                        $list = new Asset_List();
-                        $list->setCondition("parentId = ?", $asset->getId());
-                        $list->setOrderKey("filename");
-                        $list->setOrder("asc");
-
-                        $childsList = $list->load();
-                        $requestedNodes = array();
-                        foreach ($childsList as $child) {
-                            $requestedNodes[] = $child->getId();
-                        }
-                        $userPermissionsNamespace->expandedNodes = array_merge($userPermissionsNamespace->expandedNodes, $requestedNodes);
-                    }
-                } else {
-                    $userPermissionsNamespace->expandedNodes = array_merge($userPermissionsNamespace->expandedNodes, array(1));
-                }
-
-                //load all nodes which are open in client
-                $assetList = new Asset_List();
-                $assetList->setOrderKey("filename");
-                $assetList->setOrder("asc");
-                $queryIds = "'" . implode("','", $userPermissionsNamespace->expandedNodes) . "'";
-                $assetList->setCondition("id in (" . $queryIds . ")");
-                $o = $assetList->load();
-                $total = count($o);
-                $assets = array();
-                foreach ($o as $asset) {
-                    if ($asset->getParentId() > 0) {
-                        $parent = Asset::getById($asset->getParentId());
-                    } else $parent = null;
-
-                    // get current user permissions
-                    $asset->getPermissionsForUser($this->getUser());
-                    // only display asset if listing is allowed for the current user
-                    if ($asset->isAllowed("list") and $asset->isAllowed("permissions")) {
-                        $treeNodePermissionConfig = $this->getTreeNodePermissionConfig($user, $asset, $parent, true);
-                        $assets[] = $treeNodePermissionConfig;
-                        $tmpAssets[$asset->getId()] = $treeNodePermissionConfig;
-                    }
-                }
-
-                //only visible nodes and in the order how they should be displayed ... doesn't make sense but seems to fix bug of duplicate nodes
-                $assetsForFrontend = array();
-                $visible = $this->_getParam("visible");
-                if ($visible) {
-                    $visibleNodes = explode(",", $visible);
-                    foreach ($visibleNodes as $nodeId) {
-                        $assetsForFrontend[] = $tmpAssets[$nodeId];
-                        if ($nodeId == $this->_getParam("anode") and is_array($requestedNodes)) {
-                            foreach ($requestedNodes as $nId) {
-                                $assetsForFrontend[] = $tmpAssets[$nId];
-                            }
-                        }
-                    }
-                    $assets = $assetsForFrontend;
-                }
-
-            }
-            $this->_helper->json(array(
-                "total" => $total,
-                "data" => $assets,
-                "success" => true
-            ));
-
-
-        }
     }
 
     public function getPredefinedPropertiesAction() {
@@ -428,7 +212,6 @@ class Admin_AssetController extends Pimcore_Controller_Action_Admin {
         }
 
         $parentAsset = Asset::getById(intval($this->_getParam("parentId")));
-        $parentAsset->getPermissionsForUser($this->getUser());
 
         // check for dublicate filename
         $filename = $this->getSafeFilename($parentAsset->getFullPath(), $filename);
@@ -474,7 +257,6 @@ class Admin_AssetController extends Pimcore_Controller_Action_Admin {
         $asset = Asset::getById($this->_getParam("id"));
         $asset->setData(file_get_contents($_FILES["Filedata"]["tmp_name"]));
         $asset->setCustomSetting("thumbnails",null);
-        $asset->getPermissionsForUser($this->getUser());
 
         if ($asset->isAllowed("publish")) {
 
@@ -500,8 +282,6 @@ class Admin_AssetController extends Pimcore_Controller_Action_Admin {
 
         $success = false;
         $parentAsset = Asset::getById(intval($this->_getParam("parentId")));
-        $parentAsset->getPermissionsForUser($this->getUser());
-
         $equalAsset = Asset::getByPath($parentAsset->getFullPath() . "/" . $this->_getParam("name"));
 
         if ($parentAsset->isAllowed("create")) {
@@ -547,7 +327,6 @@ class Admin_AssetController extends Pimcore_Controller_Action_Admin {
 
         } else if($this->_getParam("id")) {
             $asset = Asset::getById($this->_getParam("id"));
-            $asset->getPermissionsForUser($this->getUser());
 
             if ($asset->isAllowed("delete")) {
                 $asset->delete();
@@ -647,7 +426,8 @@ class Admin_AssetController extends Pimcore_Controller_Action_Admin {
                 "remove" => $asset->isAllowed("delete"),
                 "settings" => $asset->isAllowed("settings"),
                 "rename" => $asset->isAllowed("rename"),
-                "publish" => $asset->isAllowed("publish")
+                "publish" => $asset->isAllowed("publish"),
+                "view" => $asset->isAllowed("view")
             )
         );
 
@@ -713,90 +493,6 @@ class Admin_AssetController extends Pimcore_Controller_Action_Admin {
         return $tmpAsset;
     }
 
-    /**
-     * @param  User $user
-     * @param  Asset $asset
-     * @param  Asset $parent
-     * @param boolean $expanded
-     * @return
-     */
-    protected function getTreeNodePermissionConfig($user, $child, $parent, $expanded) {
-
-        $userGroup = $user->getParent();
-        if ($userGroup instanceof User) {
-            $child->getPermissionsForUser($userGroup);
-
-            $lock_list = $child->isAllowed("list");
-            $lock_view = $child->isAllowed("view");
-            $lock_publish = $child->isAllowed("publish");
-            $lock_delete = $child->isAllowed("delete");
-            $lock_rename = $child->isAllowed("rename");
-            $lock_create = $child->isAllowed("create");
-            $lock_permissions = $child->isAllowed("permissions");
-            $lock_settings = $child->isAllowed("settings");
-            $lock_versions = $child->isAllowed("versions");
-            $lock_properties = $child->isAllowed("properties");
-        }
-
-        if ($parent instanceof Asset) {
-            $parent->getPermissionsForUser($user);
-        }
-        $assetPermission = $child->getPermissionsForUser($user);
-
-        $generallyAllowed = $user->isAllowed("assets");
-
-        $parentId = (int) $child->getParentId();
-        $parentAllowedList = true;
-        if ($parent instanceof Asset) {
-            $parentAllowedList = $parent->isAllowed("list") and $generallyAllowed;
-        }
-
-        $tmpAsset = array(
-
-            "_parent" => $parentId > 0 ? $parentId : null,
-            "_id" => (int) $child->getId(),
-            "text" => $child->getFilename(),
-            "type" => $child->getType(),
-            "path" => $child->getFullPath(),
-            "basePath" => $child->getPath(),
-            "elementType" => "asset",
-            "permissionSet" => $assetPermission->getId() > 0 and $assetPermission->getCid() === $child->getId(),
-            "list" => $child->isAllowed("list"),
-            "list_editable" => $parentAllowedList  and $generallyAllowed and !$lock_list and !$user->isAdmin(),
-            "view" => $child->isAllowed("view"),
-            "view_editable" => $child->isAllowed("list") and $generallyAllowed and !$lock_view and !$user->isAdmin(),
-            "publish" => $child->isAllowed("publish"),
-            "publish_editable" => $child->isAllowed("list") and $generallyAllowed and !$lock_publish and !$user->isAdmin(),
-            "delete" => $child->isAllowed("delete"),
-            "delete_editable" => $child->isAllowed("list") and $generallyAllowed and !$lock_delete and !$user->isAdmin(),
-            "rename" => $child->isAllowed("rename"),
-            "rename_editable" => $child->isAllowed("list") and $generallyAllowed and !$lock_rename and !$user->isAdmin(),
-            "create" => $child->isAllowed("create"),
-            "create_editable" => $child->isAllowed("list") and $generallyAllowed and !$lock_create and !$user->isAdmin(),
-            "permissions" => $child->isAllowed("permissions"),
-            "permissions_editable" => $child->isAllowed("list") and $generallyAllowed and !$lock_permissions and !$user->isAdmin(),
-            "settings" => $child->isAllowed("settings"),
-            "settings_editable" => $child->isAllowed("list") and $generallyAllowed and !$lock_settings and !$user->isAdmin(),
-            "versions" => $child->isAllowed("versions"),
-            "versions_editable" => $child->isAllowed("list") and $generallyAllowed and !$lock_versions and !$user->isAdmin(),
-            "properties" => $child->isAllowed("properties"),
-            "properties_editable" => $child->isAllowed("list") and $generallyAllowed and !$lock_properties and !$user->isAdmin()
-
-        );
-        $tmpAsset["expanded"] = $expanded;
-        $tmpAsset["_is_leaf"] = $child->hasNoChilds();
-        // set type specific settings
-        if ($child->getType() == "folder") {
-            $tmpAsset["iconCls"] = "pimcore_icon_folder";
-        }
-        else {
-            $tmpAsset["iconCls"] = "pimcore_icon_" . Pimcore_File::getFileExtension($child->getFilename());
-        }
-
-
-        return $tmpAsset;
-    }
-
     public function updateAction() {
 
         $success = false;
@@ -805,8 +501,6 @@ class Admin_AssetController extends Pimcore_Controller_Action_Admin {
         $updateData = $this->_getAllParams();
 
         $asset = Asset::getById($this->_getParam("id"));
-        $asset->getPermissionsForUser($this->getUser());
-
         if ($asset->isAllowed("settings")) {
 
             // if the position is changed the path must be changed || also from the childs
@@ -898,8 +592,6 @@ class Admin_AssetController extends Pimcore_Controller_Action_Admin {
         $success = false;
         if ($this->_getParam("id")) {
             $asset = Asset::getById($this->_getParam("id"));
-
-            $asset->getPermissionsForUser($this->getUser());
             if ($asset->isAllowed("publish")) {
 
 
@@ -930,24 +622,6 @@ class Admin_AssetController extends Pimcore_Controller_Action_Admin {
 
                         $asset->setProperties($properties);
                     }
-                }
-
-                // permissions
-                if ($this->_getParam("permissions")) {
-                    $permissions = array();
-                    $permissionsData = Zend_Json::decode($this->_getParam("permissions"));
-
-                    if (is_array($permissionsData)) {
-                        foreach ($permissionsData as $permissionData) {
-
-                            $permission = new Asset_Permissions();
-                            $permission->setValues($permissionData);
-
-                            $permissions[] = $permission;
-                        }
-                    }
-
-                    $asset->setPermissions($permissions);
                 }
 
                 // scheduled tasks
@@ -1005,7 +679,6 @@ class Admin_AssetController extends Pimcore_Controller_Action_Admin {
         $asset = $version->loadData();
 
         $currentAsset = Asset::getById($asset->getId());
-        $currentAsset->getPermissionsForUser($this->getUser());
         if ($currentAsset->isAllowed("publish")) {
             try {
                 $asset->save();
@@ -1136,8 +809,8 @@ class Admin_AssetController extends Pimcore_Controller_Action_Admin {
 
         $config = new Asset_Video_Thumbnail_Config();
         $config->setName("pimcore_video_preview_" . $asset->getId());
-        $config->setAudioBitrate(128000);
-        $config->setVideoBitrate(700000);
+        $config->setAudioBitrate(128);
+        $config->setVideoBitrate(700);
 
         $config->setItems(array(
             array(
@@ -1202,12 +875,20 @@ class Admin_AssetController extends Pimcore_Controller_Action_Admin {
         $assets = array();
 
         foreach ($list as $asset) {
-            if (method_exists($asset, "getThumbnail")) {
+
+            $thumbnailMethod = "";
+            if ($asset instanceof Asset_Image) {
+                $thumbnailMethod = "getThumbnail";
+            } else if ($asset instanceof Asset_Video && Pimcore_Video::isAvailable()) {
+                $thumbnailMethod = "getImageThumbnail";
+            }
+
+            if (!empty($thumbnailMethod)) {
                 $assets[] = array(
                     "id" => $asset->getId(),
                     "type" => $asset->getType(),
                     "filename" => $asset->getFilename(),
-                    "url" => $asset->getThumbnail(array(
+                    "url" => $asset->$thumbnailMethod(array(
                         "contain" => true,
                         "width" => 250,
                         "height" => 250,
@@ -1317,7 +998,6 @@ class Admin_AssetController extends Pimcore_Controller_Action_Admin {
             $target = Asset::getById($targetId);
         }
 
-        $target->getPermissionsForUser($this->getUser());
         if ($target->isAllowed("create")) {
             $source = Asset::getById($sourceId);
             if ($source != null) {
@@ -1430,7 +1110,6 @@ class Admin_AssetController extends Pimcore_Controller_Action_Admin {
     protected function importFromFileSystem ($path, $parentId) {
 
         $assetFolder = Asset::getById($parentId);
-        $assetFolder->getPermissionsForUser($this->getUser());
         $files = rscandir($path."/");
 
         foreach ($files as $file) {

@@ -1,4 +1,17 @@
 <?php
+/**
+ * Pimcore
+ *
+ * LICENSE
+ *
+ * This source file is subject to the new BSD license that is bundled
+ * with this package in the file LICENSE.txt.
+ * It is also available through the world-wide-web at this URL:
+ * http://www.pimcore.org/license
+ *
+ * @copyright  Copyright (c) 2009-2010 elements.at New Media Solutions GmbH (http://www.elements.at)
+ * @license    http://www.pimcore.org/license     New BSD License
+ */
 
 include_once("simple_html_dom.php");
 
@@ -15,13 +28,21 @@ class Pimcore_View_Helper_Glossary extends Zend_View_Helper_Abstract {
     }
 
     public function glossary() {
-        return self::getController();
+        $controller = self::getController();
+        $controller->setView($this->view);
+        return $controller;
     }
 
 }
 
 
 class Pimcore_View_Helper_Glossary_Controller {
+
+    /**
+     * @var Pimcore_View
+     */
+    protected $view;
+
 
     public function start() {
         ob_start();
@@ -43,7 +64,7 @@ class Pimcore_View_Helper_Glossary_Controller {
         if (!empty($data) && $enabled) {
             // replace
 
-            $blockedTags = array("a","script","style","code","pre","textarea","acronym","abbr","option");
+            $blockedTags = array("a","script","style","code","pre","textarea","acronym","abbr","option","h1","h2","h3","h4","h5","h6");
 
             // why not using a simple str_ireplace(array(), array(), $subject) ?
             // because if you want to replace the terms "Donec vitae" and "Donec" you will get nested links, so the content of the html must be reloaded every searchterm to ensure that there is no replacement within a blocked tag
@@ -58,10 +79,18 @@ class Pimcore_View_Helper_Glossary_Controller {
 
             $es = $html->find('text');
 
-            $tmpData = array();
-            foreach ($data as $search => $replace) {
-                $tmpData["search"][] = $search;
-                $tmpData["replace"][] = $replace;
+            $tmpData = array(
+                "search" => array(),
+                "replace" => array(),
+                "placeholder" => array()
+            );
+            foreach ($data as $entry) {
+                if($this->view->document instanceof Document && $entry["linkType"] == "internal" && $this->view->document->getId() == $entry["linkTarget"]) {
+                    continue;
+                }
+
+                $tmpData["search"][] = $entry["search"];
+                $tmpData["replace"][] = $entry["replace"];
             }
             $data = $tmpData;
 
@@ -72,8 +101,8 @@ class Pimcore_View_Helper_Glossary_Controller {
 
             foreach ($es as $e) {
                 if(!in_array((string) $e->parent()->tag,$blockedTags)) {
-                    $e->innertext = str_ireplace($data["search"], $data["placeholder"], $e->innertext);
-                    $e->innertext = str_ireplace($data["placeholder"], $data["replace"], $e->innertext);
+                    $e->innertext = preg_replace($data["search"], $data["placeholder"], $e->innertext);
+                    $e->innertext = str_replace($data["placeholder"], $data["replace"], $e->innertext);
                 }
             }
             echo $html->save();
@@ -118,7 +147,7 @@ class Pimcore_View_Helper_Glossary_Controller {
         if (!$data = Pimcore_Model_Cache::load($cacheKey)) {
 
             $list = new Glossary_List();
-            $list->setCondition("language = ?", $locale->getLanguage());
+            $list->setCondition("language = ? OR language IS NULL OR language = ''", $locale->getLanguage());
             $list->setOrderKey("LENGTH(`text`)", false);
             $list->setOrder("DESC");
             $data = $list->getDataArray();
@@ -162,21 +191,56 @@ class Pimcore_View_Helper_Glossary_Controller {
                     $r = '<acronym class="pimcore_glossary" title="' . $d["acronym"] . '">' . $r . '</acronym>';
                 }
 
+                $linkType = "";
+                $linkTarget = "";
+
                 if ($d["link"]) {
+
+                    $linkType = "external";
+                    $linkTarget = $d["link"];
 
                     if (intval($d["link"])) {
                         if ($doc = Document::getById($d["link"])) {
                             $d["link"] = $doc->getFullPath();
+                            $linkType = "internal";
+                            $linkTarget = $doc->getId();
                         }
                     }
 
                     $r = '<a class="pimcore_glossary" href="' . $d["link"] . '">' . $r . '</a>';
                 }
 
-                $mappedData[$d["text"]] = $r;
+                // add PCRE delimiter and modifiers
+                $d["text"] = "/" . preg_quote($d["text"],"/") . "/";
+                if(!$d["casesensitive"]) {
+                    $d["text"] .= "i";
+                }
+
+                $mappedData[] = array(
+                    "replace" => $r,
+                    "search" => $d["text"],
+                    "linkType" => $linkType,
+                    "linkTarget" => $linkTarget
+                );
             }
         }
 
         return $mappedData;
+    }
+
+    /**
+     * @param \Pimcore_View $view
+     */
+    public function setView($view)
+    {
+        $this->view = $view;
+    }
+
+    /**
+     * @return \Pimcore_View
+     */
+    public function getView()
+    {
+        return $this->view;
     }
 }

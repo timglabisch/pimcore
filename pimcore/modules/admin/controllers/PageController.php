@@ -29,11 +29,15 @@ class Admin_PageController extends Pimcore_Controller_Action_Admin_Document {
         $page = $this->getLatestVersion($page);
         
         $page->getVersions();
-        //$page->getPermissions();
         $page->getScheduledTasks();
-        $page->getPermissionsForUser($this->getUser());
         $page->idPath = Pimcore_Tool::getIdPathForElement($page);
-        
+        $page->userPermissions = $page->getUserPermissions();
+
+        // get depending redirects
+        $redirectList = new Redirect_List();
+        $redirectList->setCondition("target = ?", $page->getId());
+        $page->redirects = $redirectList->load();
+
         // unset useless data
         $page->setElements(null);
         $page->childs = null;
@@ -54,8 +58,6 @@ class Admin_PageController extends Pimcore_Controller_Action_Admin_Document {
             $page = Document_Page::getById($this->_getParam("id"));
             
             $page = $this->getLatestVersion($page);
-            
-            $page->getPermissionsForUser($this->getUser());
             $page->setUserModification($this->getUser()->getId());
 
             // save to session
@@ -68,6 +70,46 @@ class Admin_PageController extends Pimcore_Controller_Action_Admin_Document {
             }
             if ($this->_getParam("task") == "publish") {
                 $page->setPublished(true);
+            }
+
+            // check for redirects
+            if($this->getUser()->isAllowed("redirects") && $this->_getParam("settings")) {
+                $settings = Zend_Json::decode($this->_getParam("settings"));
+
+                if(is_array($settings)) {
+                    $redirectList = new Redirect_List();
+                    $redirectList->setCondition("target = ?", $page->getId());
+                    $existingRedirects = $redirectList->load();
+                    $existingRedirectIds = array();
+                    foreach ($existingRedirects as $existingRedirect) {
+                        $existingRedirectIds[$existingRedirect->getId()] = $existingRedirect->getId();
+                    }
+
+                    for($i=1;$i<100;$i++) {
+                        if(array_key_exists("redirect_url_".$i, $settings)) {
+
+                            // check for existing
+                            if($settings["redirect_id_".$i]) {
+                                $redirect = Redirect::getById($settings["redirect_id_".$i]);
+                                unset($existingRedirectIds[$redirect->getId()]);
+                            } else {
+                                // create new one
+                                $redirect = new Redirect();
+                            }
+
+                            $redirect->setSource($settings["redirect_url_".$i]);
+                            $redirect->setTarget($page->getId());
+                            $redirect->setStatusCode(301);
+                            $redirect->save();
+                        }
+                    }
+
+                    // remove existing redirects which were delete
+                    foreach ($existingRedirectIds as $existingRedirectId) {
+                        $redirect = Redirect::getById($existingRedirectId);
+                        $redirect->delete();
+                    }
+                }
             }
 
             // only save when publish or unpublish

@@ -19,6 +19,7 @@ pimcore.layout.treepanelmanager = {
     finished: [],
     callbacks: {},
     inital: true,
+    onReadyCallback: [],
 
     /**
      * This method is called in the tree classes of the elements (document, asset, object, custom views, ...)
@@ -36,7 +37,7 @@ pimcore.layout.treepanelmanager = {
     startup: function () {
         if(this.items.length < 1) {
             // fire pimcoreReady because there is no treepanel
-            pimcore.plugin.broker.fireEvent("pimcoreReady", pimcore.viewport);
+            this.onReady();
         }
     },
 
@@ -61,9 +62,61 @@ pimcore.layout.treepanelmanager = {
         
         if(this.inital) {
             // all processed fire the pimcoreReady event
-            pimcore.plugin.broker.fireEvent("pimcoreReady", pimcore.viewport);
+            this.onReady();
         }
         
         this.inital = false;
+    },
+
+    onReady: function () {
+        for (var i=0; i<this.onReadyCallback.length; i++) {
+            if(typeof this.onReadyCallback[i] == "function") {
+                this.onReadyCallback[i]();
+            }
+        }
+        pimcore.plugin.broker.fireEvent("pimcoreReady", pimcore.viewport);
+    },
+
+    addOnReadyCallback: function (event) {
+        this.onReadyCallback.push(event);
+    },
+
+    toLeft: function () {
+        pimcore.layout.treepanelmanager.move(this.tree, Ext.getCmp("pimcore_panel_tree_right"), Ext.getCmp("pimcore_panel_tree_left"));
+        this.tree.tools.left.hide();
+        this.tree.tools.right.show();
+    },
+
+    toRight: function () {
+        pimcore.layout.treepanelmanager.move(this.tree, Ext.getCmp("pimcore_panel_tree_left"), Ext.getCmp("pimcore_panel_tree_right"));
+        this.tree.tools.right.hide();
+        this.tree.tools.left.show();
+    },
+
+    move: function (tree, source, target) {
+        if(target.hidden) {
+            target.show();
+            target.expand();
+        }
+
+        tree.collapse();
+
+        target.items.each(function (item, index, length) {
+            item.collapse();
+        });
+
+        target.add(tree);
+        target.doLayout();
+        tree.expand();
+
+        if(source.items.getCount() < 1) {
+            source.collapse();
+            source.hide();
+        } else if(!source.getLayout().activeItem) {
+            source.items.first().expand();
+        }
+        source.doLayout();
+
+        pimcore.layout.refresh();
     }
 };

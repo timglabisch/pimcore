@@ -3,6 +3,10 @@
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
     <meta name="robots" content="noindex, nofollow" />
+
+    <meta name="viewport" content="width=device-width; initial-scale=1.0; maximum-scale=1.0; user-scalable=no;" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+
     <title><?php echo htmlentities($_SERVER["HTTP_HOST"], ENT_QUOTES, 'UTF-8') ?> :: pimcore</title>
 
     <!-- load in head because of the progress bar at loading -->
@@ -49,10 +53,10 @@
             "/pimcore/static/js/lib/ext-plugins/ux/statusbar/css/statusbar.css",
             "/pimcore/static/js/lib/ext-plugins/ux/css/Portal.css",
             "/pimcore/static/js/lib/ext-plugins/ux/css/MultiSelect.css",
+            "/pimcore/static/js/lib/ext-plugins/ux/treegrid/treegrid.css",
             "/pimcore/static/js/lib/ext-plugins/ux/css/ColumnHeaderGroup.css",
             "/pimcore/static/js/lib/ext-plugins/ux/gridfilters/css/GridFilters.css",
             "/pimcore/static/js/lib/ext-plugins/ux/gridfilters/css/RangeMenu.css",
-            "/pimcore/static/js/lib/ext-plugins/ux.maximgb.tg/css/TreeGrid.css",
             "/pimcore/static/js/lib/ext-plugins/ux/fileuploadfield/css/fileuploadfield.css",
             "/pimcore/static/css/ext-admin-overwrite.css"
         );
@@ -88,7 +92,7 @@
 
             // library
             "lib/prototype-light.js",
-            "lib/jquery-1.4.2.min.js",
+            "lib/jquery-1.7.1.min.js",
             "lib/jquery.color.js",
             $scriptExtAdapter,
 
@@ -109,7 +113,6 @@
             "lib/ext-plugins/ux/treegrid/TreeGridLoader.js",
             "lib/ext-plugins/ux/treegrid/TreeGridColumns.js",
             "lib/ext-plugins/ux/treegrid/TreeGrid.js",
-            "lib/ext-plugins/ux.maximgb.tg/TreeGrid.js",
             "lib/ext-plugins/SuperBoxSelect/SuperBoxSelect.js",
 
             "lib/ext-plugins/ux/RowEditor.js",
@@ -167,8 +170,18 @@
             "pimcore/tool/genericiframewindow.js",
 
             // settings
+            "pimcore/settings/user/panels/abstract.js",
             "pimcore/settings/user/panel.js",
-            "pimcore/settings/user/PermissionRowEditor.js",
+            "pimcore/settings/user/usertab.js",
+            "pimcore/settings/user/role/panel.js",
+            "pimcore/settings/user/role/tab.js",
+            "pimcore/settings/user/user/objectrelations.js",
+            "pimcore/settings/user/user/settings.js",
+            "pimcore/settings/user/workspaces.js",
+            "pimcore/settings/user/workspace/asset.js",
+            "pimcore/settings/user/workspace/document.js",
+            "pimcore/settings/user/workspace/object.js",
+            "pimcore/settings/user/role/settings.js",
             "pimcore/settings/profile/panel.js",
             "pimcore/settings/thumbnail/item.js",
             "pimcore/settings/thumbnail/panel.js",
@@ -193,6 +206,7 @@
             "pimcore/settings/fileexplorer/explorer.js",
             "pimcore/settings/maintenance.js",
             "pimcore/settings/liveconnect.js",
+            "pimcore/settings/robotstxt.js",
 
             // element
             "pimcore/element/abstract.js",
@@ -216,23 +230,22 @@
             "pimcore/document/properties.js",
             "pimcore/document/document.js",
             "pimcore/document/page_snippet.js",
-            //"pimcore/document/page_email.js", //ckogler
             "pimcore/document/edit.js",
-            "pimcore/document/editemail.js", //ckogler
+            "pimcore/document/editemail.js",
             "pimcore/document/versions.js",
             "pimcore/document/pages/settings.js",
             "pimcore/document/pages/preview.js",
             "pimcore/document/snippets/settings.js",
-            "pimcore/document/emails/settings.js", //ckogler
-            "pimcore/document/emails/logs.js", //ckogler
+            "pimcore/document/emails/settings.js",
+            "pimcore/document/emails/logs.js",
             "pimcore/document/link.js",
             "pimcore/document/hardlink.js",
             "pimcore/document/folder.js",
-            "pimcore/document/permissions.js",
             "pimcore/document/tree.js",
             "pimcore/document/snippet.js",
-            "pimcore/document/email.js", //ckogler
+            "pimcore/document/email.js",
             "pimcore/document/page.js",
+            "pimcore/document/seopanel.js",
             
             // assets
             "pimcore/asset/asset.js",
@@ -244,7 +257,6 @@
             "pimcore/asset/text.js",
             "pimcore/asset/folder.js",
             "pimcore/asset/versions.js",
-            "pimcore/asset/permissions.js",
             "pimcore/asset/tree.js",
         
             // object
@@ -335,7 +347,6 @@
             "pimcore/object/versions.js",
             "pimcore/object/variantsTab.js",
             "pimcore/object/importer.js",
-            "pimcore/object/permissions.js",
             "pimcore/object/folder/search.js",
             "pimcore/object/edit.js",
             "pimcore/object/abstract.js",
@@ -385,6 +396,7 @@
             "pimcore/document/seemode.js"
         );
 
+        // they're here because they are using some pimcore core functionality like t() for i18n , ...
         $modifiedPlugins = array(
             "lib/ext-plugins/SwfUploadPanel/swfupload.js",
             "lib/ext-plugins/SwfUploadPanel/SwfUploadPanel.js"
@@ -403,7 +415,6 @@
             maintenance_active: <?php echo $this->maintenance_enabled; ?>,
             maintenance_mode: <?php echo Pimcore_Tool_Admin::isInMaintenanceMode() ? "true" : "false"; ?>,
             mail: <?php echo $this->mail_settings_incomplete ?>,
-            welcomescreen: <?php echo $this->config->general->welcomescreen ? "true" : "false"; ?>,
             debug: <?php echo Pimcore::inDebugMode() ? "true" : "false"; ?>,
             devmode: <?php echo PIMCORE_DEVMODE ? "true" : "false"; ?>,
             google_analytics_enabled: <?php echo Zend_Json::encode((bool) Pimcore_Google_Analytics::isConfigured()) ?>,
@@ -413,6 +424,7 @@
             language: '<?php echo $this->language; ?>',
             websiteLanguages: <?php echo Zend_Json::encode(explode(",",$this->config->general->validLanguages)); ?>,
             google_translate_api_key: "<?php echo $this->config->services->translate->apikey; ?>",
+            google_maps_api_key: "<?php echo $this->config->services->googlemaps->apikey ?>",
             liveconnectToken: "<?php echo $this->liveconnectToken; ?>",
             showCloseConfirmation: true
         };
@@ -420,7 +432,7 @@
     
     
     <?php // 3rd party libraries ?>
-    <script type="text/javascript" src="http://maps.googleapis.com/maps/api/js?sensor=false"></script> 
+    <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?sensor=false&key=<?php echo $this->config->services->googlemaps->apikey ?>"></script>
     
     <script type="text/javascript" src="/admin/misc/json-transliteration?_dc=<?php echo Pimcore_Version::$revision ?>"></script>
     <script type="text/javascript" src="/admin/misc/json-translations-system/language/<?php echo $this->language ?>/?_dc=<?php echo Pimcore_Version::$revision ?>"></script>

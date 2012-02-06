@@ -28,7 +28,6 @@ pimcore.asset.document = Class.create(pimcore.asset.asset, {
         this.properties = new pimcore.element.properties(this, "asset");
         this.versions = new pimcore.asset.versions(this);
         this.scheduler = new pimcore.element.scheduler(this, "asset");
-        this.permissions = new pimcore.asset.permissions(this);
         this.dependencies = new pimcore.element.dependencies(this, "asset");
 
         this.getData();
@@ -49,9 +48,7 @@ pimcore.asset.document = Class.create(pimcore.asset.asset, {
         if (this.isAllowed("settings")) {
             items.push(this.scheduler.getLayout());
         }
-        if (this.isAllowed("permissions")) {
-            items.push(this.permissions.getLayout());
-        }
+
         items.push(this.dependencies.getLayout());
 
         this.tabbar = new Ext.TabPanel({
@@ -73,6 +70,7 @@ pimcore.asset.document = Class.create(pimcore.asset.asset, {
 
             this.editPanel = new Ext.Panel({
                 title: t("preview"),
+                bodyStyle: "-webkit-overflow-scrolling:touch;",
                 html: '<iframe src="/admin/asset/get-preview-document/id/' + this.id + '/" frameborder="0" id="asset_document_edit_' + this.id + '"></iframe>',
                 iconCls: "pimcore_icon_tab_edit"
             });

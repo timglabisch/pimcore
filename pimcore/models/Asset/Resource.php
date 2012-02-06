@@ -157,7 +157,7 @@ class Asset_Resource extends Element_Resource {
         $this->db->query("update assets set path = replace(path," . $this->db->quote($oldPath) . "," . $this->db->quote($this->model->getFullPath()) . ") where path like " . $this->db->quote($oldPath . "/%")  . ";");
 
         //update assets child permission paths
-        $this->db->query("update assets_permissions set cpath = replace(cpath," . $this->db->quote($oldPath) . "," . $this->db->quote($this->model->getFullPath()) . ") where cpath like " . $this->db->quote($oldPath . "/%") . ";");
+        $this->db->query("update users_workspaces_asset set cpath = replace(cpath," . $this->db->quote($oldPath) . "," . $this->db->quote($this->model->getFullPath()) . ") where cpath like " . $this->db->quote($oldPath . "/%") . ";");
 
         //update assets child properties paths
         $this->db->query("update properties set cpath = replace(cpath," . $this->db->quote($oldPath) . "," . $this->db->quote($this->model->getFullPath()) . ") where cpath like " . $this->db->quote($oldPath . "/%") . ";");
@@ -268,135 +268,10 @@ class Asset_Resource extends Element_Resource {
     }
 
     /**
-     * get recursivly the permissions for the passed user
-     *
-     * @param User $user
-     * @return Asset_Permission
-     */
-    public function getPermissionsForUser(User $user) {
-        $pathParts = explode("/", $this->model->getPath() . $this->model->getFilename());
-        unset($pathParts[0]);
-        $tmpPathes = array();
-        $pathConditionParts[] = "cpath = '/'";
-        foreach ($pathParts as $pathPart) {
-            $tmpPathes[] = $pathPart;
-            $pathConditionParts[] = $this->db->quoteInto("cpath = ?", "/" . implode("/", $tmpPathes));
-        }
-
-        $pathCondition = implode(" OR ", $pathConditionParts);
-        $permissionRaw = $this->db->fetchRow("SELECT id FROM assets_permissions WHERE (" . $pathCondition . ") AND userId = ? ORDER BY cpath DESC LIMIT 1", $user->getId());
-
-        //path condition for parent asset
-        $parentAssetPathParts = array_slice($pathParts, 0, -1);
-        $parentAssetPathConditionParts[] = "cpath = '/'";
-        foreach ($parentAssetPathParts as $parentAssetPathPart) {
-            $parentAssetTmpPaths[] = $parentAssetPathPart;
-            $parentAssetPathConditionParts[] = $this->db->quoteInto("cpath = ?", "/" . implode("/", $parentAssetTmpPaths));
-        }
-        $parentAssetPathCondition = implode(" OR ", $parentAssetPathConditionParts);
-        $parentAssetPermissionRaw = $this->db->fetchRow("SELECT id FROM assets_permissions WHERE (" . $parentAssetPathCondition . ") AND userId = ? ORDER BY cpath DESC LIMIT 1", $user->getId());
-        $parentAssetPermissions = new Asset_Permissions();
-        if ($parentAssetPermissionRaw["id"]) {
-
-            $parentAssetPermissions = Asset_Permissions::getById($parentAssetPermissionRaw["id"]);
-        }
-
-
-        $parentUser = $user->getParent();
-        if ($parentUser instanceof User and $parentUser->isAllowed("assets")) {
-            $parentPermission = $this->getPermissionsForUser($parentUser);
-        } else $parentPermission = null;
-
-        $permission = new Asset_Permissions();
-
-        if ($permissionRaw["id"] and $parentPermission instanceof Asset_Permissions ) {
-
-            //consider user group permissions
-            $permission = Asset_Permissions::getById($permissionRaw["id"]);
-            $permissionKeys = $permission->getValidPermissionKeys();
-
-            foreach ($permissionKeys as $key) {
-                $getter = "get" . ucfirst($key);
-                $setter = "set" . ucfirst($key);
-
-                if ((!$permission->getList() and !$parentPermission->getList())  or !$parentAssetPermissions->getList()) {
-                    //no list - return false for all
-                    $permission->$setter(false);
-                } else if ($parentPermission->$getter()) {
-                    //if user group allows -> return true, it overrides the user permission!
-                    $permission->$setter(true);
-                }
-            }
-
-
-        } else if ($permissionRaw["id"]) {
-            //use user permissions, no user group to override anything
-            $permission = Asset_Permissions::getById($permissionRaw["id"]);
-
-            //check parent asset's list permission and current object's list permission
-            if (!$parentAssetPermissions->getList() or !$permission->getList()) {
-                $permissionKeys = $permission->getValidPermissionKeys();
-                foreach ($permissionKeys as $key) {
-                    $setter = "set" . ucfirst($key);
-                    $permission->$setter(false);
-                }
-            }
-
-        } else if ($parentPermission instanceof Asset_Permissions and $parentPermission->getId() > 0) {
-            //use user group permissions - no permission found for user at all
-            $permission = $parentPermission;
-            //check parent asset's list permission and current object's list permission
-            if (!$parentAssetPermissions->getList() or !$permission->getList()) {
-                $permissionKeys = $permission->getValidPermissionKeys();
-                foreach ($permissionKeys as $key) {
-                    $setter = "set" . ucfirst($key);
-                    $permission->$setter(false);
-                }
-            }
-
-        } else {
-            //neither user group nor user has permissions set -> use default all allowed
-            $permission->setUser($user);
-            $permission->setUserId($user->getId());
-            $permission->setUsername($user->getUsername());
-            $permission->setCid($this->model->getId());
-            $permission->setCpath($this->model->getFullPath());
-
-        }
-
-        $this->model->setUserPermissions($permission);
-        return $permission;
-    }
-
-
-    /**
-     * all user permissions for this document
-     * @return void
-     */
-
-    public function getPermissions() {
-
-        $permissions = array();
-
-        $permissionsRaw = $this->db->fetchAll("SELECT id FROM assets_permissions WHERE cid = ? ORDER BY cpath ASC", $this->model->getId());
-
-        $userIdMappings = array();
-        foreach ($permissionsRaw as $permissionRaw) {
-            $permissions[] = Asset_Permissions::getById($permissionRaw["id"]);
-        }
-
-
-        $this->model->setPermissions($permissions);
-
-        return $permissions;
-    }
-
-
-    /**
      * @return void
      */
     public function deleteAllPermissions() {
-        $this->db->delete("assets_permissions", $this->db->quoteInto("cid = ?", $this->model->getId()));
+        $this->db->delete("users_workspaces_asset", $this->db->quoteInto("cid = ?", $this->model->getId()));
     }
 
 
@@ -498,5 +373,44 @@ class Asset_Resource extends Element_Resource {
             }
         }
         return;
+    }
+
+    public function isAllowed($type, $user) {
+
+        // collect properties via parent - ids
+        $parentIds = array(1);
+
+        $obj = $this->model->getParent();
+        if($obj) {
+            while($obj) {
+                $parentIds[] = $obj->getId();
+                $obj = $obj->getParent();
+            }
+        }
+        $parentIds[] = $this->model->getId();
+
+        $userIds = $user->getRoles();
+        $userIds[] = $user->getId();
+
+        try {
+            $permissionsParent = $this->db->fetchOne("SELECT `" . $type . "` FROM users_workspaces_asset WHERE cid IN (".implode(",",$parentIds).") AND userId IN (" . implode(",",$userIds) . ") ORDER BY LENGTH(cpath) DESC LIMIT 1");
+
+            if($permissionsParent) {
+                return true;
+            }
+
+            // exception for list permission
+            if(empty($permissionsParent) && $type == "list") {
+                // check for childs with permissions
+                $permissionsChilds = $this->db->fetchOne("SELECT list FROM users_workspaces_asset WHERE cpath LIKE ? AND userId IN (" . implode(",",$userIds) . ") LIMIT 1", $this->model->getFullPath()."%");
+                if($permissionsChilds) {
+                    return true;
+                }
+            }
+        } catch (Exception $e) {
+            Logger::warn("Unable to get permission " . $type . " for asset " . $this->model->getId());
+        }
+
+        return false;
     }
 }  

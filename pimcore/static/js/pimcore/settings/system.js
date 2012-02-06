@@ -57,21 +57,6 @@ pimcore.settings.system = Class.create({
                     });
                 }
 
-                //cdn patterns
-                try {
-                    this.cdnPatternsStore = new Ext.data.JsonStore({
-                        autoDestroy: true,
-                        data: this.data.values.outputfilters,
-                        root: 'cdnpatternsArray',
-                        fields: ['value']
-                    });
-                } catch(e) {
-                    this.cdnPatternsStore = new Ext.data.JsonStore({
-                        autoDestroy: true,
-                        fields: ['value']
-                    });
-                }
-
                 //email - debug email addresses ckogler
                  try {
                     this.emailDebugAddressesStore = new Ext.data.JsonStore({
@@ -82,21 +67,6 @@ pimcore.settings.system = Class.create({
                     });
                 } catch(e) {
                     this.emailDebugAddressesStore = new Ext.data.JsonStore({
-                        autoDestroy: true,
-                        fields: ['value']
-                    });
-                }
-
-                //cdn host names
-                try {
-                    this.cdnHostsStore = new Ext.data.JsonStore({
-                        autoDestroy: true,
-                        data: this.data.values.outputfilters,
-                        root: 'cdnhostnamesArray',
-                        fields: ['value']
-                    });
-                } catch(e) {
-                    this.cdnHostsStore = new Ext.data.JsonStore({
                         autoDestroy: true,
                         fields: ['value']
                     });
@@ -174,6 +144,15 @@ pimcore.settings.system = Class.create({
                     ["slate","/pimcore/static/js/lib/ext-plugins/xtheme-slate/css/xtheme-slate.css"]*/
                 ]
             });
+
+            // sites error pages
+            var sitesErrorPagesFields = [];
+            var sites = pimcore.globalmanager.get("sites");
+            sitesErrorPagesFields.push(this.getErrorPageFieldConfig("default", t("main_site")));
+
+            sites.each(function (record) {
+                sitesErrorPagesFields.push(this.getErrorPageFieldConfig("site_" + record.data.id, record.data.domains.split(",")[0]));
+            }, this);
 
             // debug
             if (this.data.values.general.debug) {
@@ -290,12 +269,6 @@ pimcore.settings.system = Class.create({
                                 value: this.getValue("general.theme"),
                                 width: 100,
                                 listWidth: 100
-                            },
-                            {
-                                fieldLabel: t('show_welcome_screen'),
-                                xtype: "checkbox",
-                                name: "general.welcomescreen",
-                                checked: this.getValue("general.welcomescreen")
                             },
                             {
                                 fieldLabel: t('show_random_pictures_on_login_screen'),
@@ -623,34 +596,14 @@ pimcore.settings.system = Class.create({
                                 value: this.getValue("general.domain")
                             },
                             {
-                                fieldLabel: t('error_page'),
-                                name: 'documents.error_page',
-                                cls: "input_drop_target",
-                                value: this.getValue("documents.error_page"),
-                                width: 300,
-                                listeners: {
-                                    "render": function (el) {
-                                        new Ext.dd.DropZone(el.getEl(), {
-                                            reference: this,
-                                            ddGroup: "element",
-                                            getTargetFromEvent: function(e) {
-                                                return this.getEl();
-                                            }.bind(el),
-
-                                            onNodeOver : function(target, dd, e, data) {
-                                                return Ext.dd.DropZone.prototype.dropAllowed;
-                                            },
-
-                                            onNodeDrop : function (target, dd, e, data) {
-                                                if (data.node.attributes.elementType == "document") {
-                                                    this.setValue(data.node.attributes.path);
-                                                    return true;
-                                                }
-                                                return false;
-                                            }.bind(el)
-                                        });
-                                    }
-                                }
+                                xtype:'fieldset',
+                                title: t('error_pages'),
+                                collapsible: false,
+                                collapsed: false,
+                                autoHeight:true,
+                                labelWidth: 300,
+                                width: 600,
+                                items: sitesErrorPagesFields
                             }
                         ]
                     },
@@ -904,7 +857,7 @@ pimcore.settings.system = Class.create({
                                 xtype: "displayfield",
                                 hideLabel: true,
                                 width: 600,
-                                value: "<b>" + t('google_maps_api_key') + ' <b style="color:red;">DEPRECATED</b>',
+                                value: "<b>" + t('google_maps_api_v3_key'),
                                 cls: "pimcore_extra_label"
                             },
                             {
@@ -912,12 +865,6 @@ pimcore.settings.system = Class.create({
                                 name: 'services.googlemaps.apikey',
                                 value: this.getValue("services.googlemaps.apikey"),
                                 width: 650
-                            },{
-                                xtype: "displayfield",
-                                hideLabel: true,
-                                style: "margin-top: 10px;",
-                                width: 600,
-                                value: "&nbsp;"
                             },{
                                 xtype: "displayfield",
                                 hideLabel: true,
@@ -933,7 +880,7 @@ pimcore.settings.system = Class.create({
                                 cls: "pimcore_extra_label"
                             },
                             {
-                                fieldLabel: t('developer_key'),
+                                fieldLabel: t('api_key'),
                                 name: 'services.translate.apikey',
                                 value: this.getValue("services.translate.apikey"),
                                 width: 650
@@ -1071,79 +1018,6 @@ pimcore.settings.system = Class.create({
                                 triggerAction: "all",
                                 editable: false,
                                 style: "margin-bottom: 15px;"
-                            },
-                            {
-                                fieldLabel: t("minify_html"),
-                                xtype: "checkbox",
-                                name: "outputfilters.htmlminify",
-                                checked: this.getValue("outputfilters.htmlminify"),
-                                style: "margin-bottom: 15px;"
-                            },
-                            {
-                                fieldLabel: t("cdn"),
-                                xtype: "checkbox",
-                                name: "outputfilters.cdn",
-                                checked: this.getValue("outputfilters.cdn")
-                            },
-                            {
-                                xtype: 'superboxselect',
-                                allowBlank:true,
-                                queryDelay: 100,
-                                triggerAction: 'all',
-                                resizable: true,
-                                mode: 'local',
-                                anchor:'100%',
-                                minChars: 2,
-                                fieldLabel: t('cdn_hostnames'),
-                                name: 'outputfilters.cdnhostnames',
-                                value: this.getValue("outputfilters.cdnhostnames"),
-                                emptyText: t("superselectbox_empty_text"),
-                                store: this.cdnHostsStore,
-                                fields: ['value'],
-                                displayField: 'value',
-                                valueField: 'value',
-                                allowAddNewData: true,
-                                ctCls: 'superselect-no-drop-down',
-                                listeners: {
-                                    newitem: function(bs, v, f) {
-                                        v = v + '';
-                                        var newObj = {
-                                            value: v
-                                        };
-                                        bs.addNewItem(newObj);
-                                    }
-                                }
-
-                            },
-                            {
-                                xtype: 'superboxselect',
-                                allowBlank:true,
-                                queryDelay: 100,
-                                triggerAction: 'all',
-                                resizable: true,
-                                mode: 'local',
-                                anchor:'100%',
-                                minChars: 2,
-                                fieldLabel: t('cdn_include_patterns'),
-                                name: 'outputfilters.cdnpatterns',
-                                value: this.getValue("outputfilters.cdnpatterns"),
-                                emptyText: t("superselectbox_empty_text"),
-                                store: this.cdnPatternsStore,
-                                fields: ['value'],
-                                displayField: 'value',
-                                valueField: 'value',
-                                allowAddNewData: true,
-                                ctCls: 'superselect-no-drop-down',
-                                listeners: {
-                                    newitem: function(bs, v, f) {
-                                        v = v + '';
-                                        var newObj = {
-                                            value: v
-                                        };
-                                        bs.addNewItem(newObj);
-                                    }
-                                }
-
                             }
                         ]
                     },{
@@ -1320,6 +1194,7 @@ pimcore.settings.system = Class.create({
         pimcore.layout.refresh();
 
     },
+
     smtpAuthSelected: function(combo, record, index, forceDisable) {
         var disabled = true;
         if (index != 0 && !forceDisable) {
@@ -1331,6 +1206,40 @@ pimcore.settings.system = Class.create({
             this.layout.getForm().findField("system.settings.email.smtp.auth.username").setValue("");
             this.layout.getForm().findField("system.settings.email.smtp.auth.password").setValue("");
         }
+    },
+
+    getErrorPageFieldConfig: function (siteKey, labelText) {
+        return {
+            fieldLabel: labelText,
+            name: "documents.error_pages." + siteKey,
+            cls: "input_drop_target",
+            value: this.getValue("documents.error_pages." + siteKey),
+            width: 250,
+            xtype: "textfield",
+            listeners: {
+                "render": function (el) {
+                    new Ext.dd.DropZone(el.getEl(), {
+                        reference: this,
+                        ddGroup: "element",
+                        getTargetFromEvent: function(e) {
+                            return this.getEl();
+                        }.bind(el),
+
+                        onNodeOver : function(target, dd, e, data) {
+                            return Ext.dd.DropZone.prototype.dropAllowed;
+                        },
+
+                        onNodeDrop : function (target, dd, e, data) {
+                            if (data.node.attributes.elementType == "document") {
+                                this.setValue(data.node.attributes.path);
+                                return true;
+                            }
+                            return false;
+                        }.bind(el)
+                    });
+                }
+            }
+        };
     },
     
     checkVersionInputs: function (elementType, type, field, event) {

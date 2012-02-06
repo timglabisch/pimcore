@@ -17,18 +17,6 @@ class Pimcore_Controller_Plugin_HtmlMinify extends Zend_Controller_Plugin_Abstra
 
     protected $enabled = true;
 
-    public function routeStartup(Zend_Controller_Request_Abstract $request) {
-
-        $conf = Pimcore_Config::getSystemConfig();
-        if (!$conf->outputfilters) {
-            return $this->disable();
-        }
-
-        if (!$conf->outputfilters->htmlminify) {
-            return $this->disable();
-        }
-
-    }
 
     public function disable() {
         $this->enabled = false;
@@ -42,11 +30,8 @@ class Pimcore_Controller_Plugin_HtmlMinify extends Zend_Controller_Plugin_Abstra
         }
         
         if ($this->enabled) {
-
             $body = $this->getResponse()->getBody();
-
             $body = Minify_HTML::minify($body);
-
             $this->getResponse()->setBody($body);
         }
     }

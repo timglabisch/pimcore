@@ -33,11 +33,8 @@ pimcore.object.folder = Class.create(pimcore.object.abstract, {
         if (this.isAllowed("properties")) {
             this.properties = new pimcore.element.properties(this, "object");
         }
-        if (this.isAllowed("permissions")) {
-            this.permissions = new pimcore.object.permissions(this);
-        }
 
-        //this.dependencies = new pimcore.element.dependencies(this, "object");
+        this.dependencies = new pimcore.element.dependencies(this, "object");
     },
 
 
@@ -105,6 +102,7 @@ pimcore.object.folder = Class.create(pimcore.object.abstract, {
         // remove this instance when the panel is closed
         this.tab.on("destroy", function () {
             pimcore.globalmanager.remove("object_" + this.id);
+            pimcore.helpers.forgetOpenTab("object_" + this.id + "_folder");
 
         }.bind(this));
 
@@ -144,12 +142,12 @@ pimcore.object.folder = Class.create(pimcore.object.abstract, {
                 handler: this.save.bind(this)
             });
 
-            /*this.toolbarButtons.remove = new Ext.Button({
-             text: t('delete'),
-             iconCls: "pimcore_icon_delete_medium",
-             scale: "medium",
-             handler: this.remove.bind(this)
-             });*/
+            this.toolbarButtons.remove = new Ext.Button({
+                text: t('delete'),
+                iconCls: "pimcore_icon_delete_medium",
+                scale: "medium",
+                handler: this.remove.bind(this)
+            });
 
             var buttons = [];
 
@@ -157,9 +155,9 @@ pimcore.object.folder = Class.create(pimcore.object.abstract, {
                 buttons.push(this.toolbarButtons.publish);
             }
 
-            /*if(this.isAllowed("delete")) {
-             buttons.push(this.toolbarButtons.remove);
-             }*/
+            if(this.isAllowed("delete")) {
+                buttons.push(this.toolbarButtons.remove);
+            }
 
 
             this.toolbarButtons.reload = new Ext.Button({
@@ -200,10 +198,7 @@ pimcore.object.folder = Class.create(pimcore.object.abstract, {
         if (this.isAllowed("properties")) {
             items.push(this.properties.getLayout());
         }
-        if (this.isAllowed("permissions")) {
-            items.push(this.permissions.getLayout());
-        }
-
+        items.push(this.dependencies.getLayout());
 
         var tabbar = new Ext.TabPanel({
             tabPosition: "top",
@@ -277,12 +272,7 @@ pimcore.object.folder = Class.create(pimcore.object.abstract, {
 
 
     remove: function () {
-        var tabPanel = Ext.getCmp("pimcore_panel_tabs");
-        tabPanel.remove(this.tab);
-
-        var objectNode = pimcore.globalmanager.get("layout_object_tree").tree.getNodeById(this.id)
-        var f = pimcore.globalmanager.get("layout_object_tree").remove.bind(objectNode);
-        f();
+        pimcore.helpers.deleteObject(this.id);
     },
 
     isAllowed : function (key) {

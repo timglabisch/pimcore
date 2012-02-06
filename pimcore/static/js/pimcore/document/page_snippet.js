@@ -54,6 +54,7 @@ pimcore.document.page_snippet = Class.create(pimcore.document.document, {
 
         this.tab.on("destroy", function () {
             pimcore.globalmanager.remove("document_" + this.id);
+            pimcore.helpers.forgetOpenTab("document_" + this.id + "_" + this.data.type);
         }.bind(this));
 
 
@@ -117,11 +118,11 @@ pimcore.document.page_snippet = Class.create(pimcore.document.document, {
                 text: t('save'),
                 iconCls: "pimcore_icon_save_medium",
                 scale: "medium",
-                handler: this.save.bind(this),
+                handler: this.unpublish.bind(this),
                 menu: [{
                         text: t('save_close'),
                         iconCls: "pimcore_icon_save",
-                        handler: this.saveClose.bind(this)
+                        handler: this.unpublishClose.bind(this)
                     }]
             });
 
@@ -207,12 +208,12 @@ pimcore.document.page_snippet = Class.create(pimcore.document.document, {
                 });
             }
 
-            /*this.toolbarButtons.remove = new Ext.Button({
-             text: t('delete'),
-             iconCls: "pimcore_icon_delete_medium",
-             scale: "medium",
-             handler: this.remove.bind(this)
-             });*/
+            this.toolbarButtons.remove = new Ext.Button({
+                text: t('delete'),
+                iconCls: "pimcore_icon_delete_medium",
+                scale: "medium",
+                handler: this.remove.bind(this)
+            });
 
 
             var buttons = [];
@@ -227,9 +228,9 @@ pimcore.document.page_snippet = Class.create(pimcore.document.document, {
                 buttons.push(this.toolbarButtons.unpublish);
             }
 
-            /*if(this.isAllowed("delete")) {
-             buttons.push(this.toolbarButtons.remove);
-             }*/
+            if(this.isAllowed("delete")) {
+                buttons.push(this.toolbarButtons.remove);
+            }
 
 
             buttons.push(this.toolbarButtons.reload);
@@ -246,7 +247,8 @@ pimcore.document.page_snippet = Class.create(pimcore.document.document, {
                 iconCls: "pimcore_icon_cursor_medium",
                 scale: "medium",
                 handler: function () {
-                    window.open(this.data.path + this.data.key);
+                    var date = new Date();
+                    window.open(this.data.path + this.data.key + "?pimcore_preview=true&time=" + date.getTime());
                 }.bind(this)
             });
             buttons.push("-");

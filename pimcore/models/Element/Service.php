@@ -10,7 +10,7 @@
  * http://www.pimcore.org/license
  *
  * @category   Pimcore
- * @package    Document
+ * @package    Element
  * @copyright  Copyright (c) 2009-2010 elements.at New Media Solutions GmbH (http://www.elements.at)
  * @license    http://www.pimcore.org/license     New BSD License
  */
@@ -32,7 +32,6 @@ class Element_Service
         // requiredBy
         foreach ($d->getRequiredBy() as $r) {
             if ($e = self::getDependedElement($r)) {
-                $e->getUserPermissions($user);
                 if ($e->isAllowed("list")) {
                     $dependencies["requiredBy"][] = self::getDependencyForFrontend($e);
                 } else {
@@ -57,8 +56,6 @@ class Element_Service
         // requires
         foreach ($d->getRequires() as $r) {
             if ($e = self::getDependedElement($r)) {
-
-                $e->getUserPermissions($user);
                 if ($e->isAllowed("list")) {
                     $dependencies["requires"][] = self::getDependencyForFrontend($e);
                 } else {
@@ -470,36 +467,28 @@ class Element_Service
      */
     public static function findForbiddenPaths($type, $user)
     {
-
-        $parentIds = array();
-        $parent = $user->getParent();
-        while ($parent instanceof User) {
-            $parentIds[] = "userId = " . $parent->getId();
-            $parent = $parent->getParent();
+        if($user->isAdmin()) {
+            return array();
         }
-        $userCondition = "( userId= " . $user->getId();
-        if (count($parentIds) > 0) {
-            $userCondition .= " OR " . implode(" or ", $parentIds) . ")";
-        } else $userCondition .= ")";
 
+        // get workspaces
+        $workspaces = $user->{"getWorkspaces".ucfirst($type)}();
+        foreach ($user->getRoles() as $roleId) {
+            $role = User_Role::getById($roleId);
+            $workspaces = array_merge($workspaces, $role->{"getWorkspaces".ucfirst($type)}());
+        }
 
-        $condition = "SELECT cpath FROM (SELECT cid,cpath,
-                sum(`list`) as `list`
-                FROM " . $type . "s_permissions
-                WHERE " . $userCondition . "
-                GROUP by cid
-                ORDER BY cpath DESC ) temp WHERE list = 0";
-
-        //Logger::log($condition);
-        $db = Pimcore_Resource::get();
-        $data = $db->fetchAll($condition);
         $forbidden = array();
-
-        if (is_array($data)) {
-            foreach ($data as $row) {
-                $forbidden[] = $row["cpath"];
+        if(count($workspaces) > 0) {
+            foreach ($workspaces as $workspace) {
+                if(!$workspace->getList()) {
+                    $forbidden[] = $workspace->getCpath();
+                }
             }
+        } else {
+            $forbidden[] = "/";
         }
+
         return $forbidden;
     }
 
@@ -563,5 +552,21 @@ class Element_Service
         $path = str_replace("//", "/", $path);
 
         return $path;
+    }
+
+    /**
+     * @static
+     * @param Element_Interface $element
+     * @return Element_Interface
+     */
+    public static function loadAllFields (Element_Interface $element) {
+
+        if($element instanceof Document) {
+            Document_Service::loadAllDocumentFields($element);
+        } else if ($element instanceof Object_Concrete) {
+            Object_Service::loadAllObjectFields($element);
+        }
+
+        return $element;
     }
 }

@@ -69,6 +69,38 @@ pimcore.layout.toolbar = Class.create({
             });
         }
 
+        if (user.isAllowed("translations")) {
+            extrasItems.push({
+                text: t("translations"),
+                iconCls: "pimcore_icon_translations",
+                handler: this.editTranslations
+            });
+        }
+
+        if (user.isAllowed("system_settings")) {
+            extrasItems.push({
+                text: t("recyclebin"),
+                iconCls: "pimcore_icon_recyclebin",
+                handler: this.recyclebin
+            });
+        }
+
+        if (user.isAllowed("documents")) {
+            extrasItems.push({
+                text: t("search_engine_optimization"),
+                iconCls: "pimcore_icon_seo",
+                hideOnClick: false,
+                menu: [{
+                    text: t("document_seo_analysis_overview"),
+                    iconCls: "pimcore_icon_seo_document",
+                    handler: this.showDocumentSeo
+                }, {
+                    text: "robots.txt",
+                    iconCls: "pimcore_icon_robots",
+                    handler: this.showRobotsTxt
+                }]
+            });
+        }
         if (user.isAllowed("plugins")) {
             extrasItems.push({
                 text: t("extensions"),
@@ -94,15 +126,18 @@ pimcore.layout.toolbar = Class.create({
             });
         }
 
-        
-        if (user.isAllowed("system_settings")) {
+        if (user.isAllowed("reports")) {
             extrasItems.push({
                 text: t("recyclebin"),
                 itemId: "recyclebin",
+                handler: this.showReports
                 iconCls: "pimcore_icon_recyclebin",
                 handler: this.recyclebin
             });
         }
+
+        extrasItems.push("-");
+
         if (user.isAllowed("system_settings")) {
             extrasItems.push({
                 text: t("backup"),
@@ -112,7 +147,7 @@ pimcore.layout.toolbar = Class.create({
             });
         }
 
-        if (user.isAllowed("update")) {
+        if (user.admin) {
             extrasItems.push({
                 text: t("update"),
                 itemId: "update",
@@ -131,66 +166,23 @@ pimcore.layout.toolbar = Class.create({
                 }
             });
 
-        }
-
-        if (user.isAllowed("system_settings") && user.admin) {
             extrasItems.push({
                 text: t("maintenance_mode"),
                 itemId: "maintenance_mode",
                 iconCls: "pimcore_icon_maintenance",
                 handler: this.showMaintenance
             });
-        }
 
-        if (user.isAllowed("translations")) {
-            extrasItems.push({
-                text: t("translations"),
-                itemId: "translations",
-                iconCls: "pimcore_icon_translations",
-                handler: this.editTranslations
-            });
-        }
-
-        // admin translations only for admins
-        if(user.admin) {
-            extrasItems.push({
-                text: t("translations_admin"),
-                itemId: "translations_admin",
-                iconCls: "pimcore_icon_translations",
-                handler: this.editTranslationsSpecific
-            });
-        }
-
-        if (user.isAllowed("system_settings")) {
             extrasItems.push({
                 text: t("systemlog"),
                 itemId: "systemlog",
                 iconCls: "pimcore_icon_systemlog",
                 handler: this.showLog
             });
-        }
 
-        if (user.isAllowed("system_settings") && user.admin) {
             extrasItems.push({
-                text: t("server_fileexplorer"),
-                itemId: "server_fileexplorer",
-                iconCls: "pimcore_icon_fileexplorer",
-                handler: this.showFilexplorer
-            });
-        }
-
-        if (user.isAllowed("reports")) {
-            extrasItems.push({
-                text: t("reports_and_marketing") + " (beta)",
+                text: t("system_infos_and_tools"),
                 itemId: "reports_and_marketing",
-                iconCls: "pimcore_icon_reports",
-                handler: this.showReports
-            });
-        }
-
-        if (user.isAllowed("system_settings") && user.admin) {
-            extrasItems.push({
-                text: t("system_infos"),
                 itemId: t("system_infos"),
                 iconCls: "pimcore_icon_info",
                 hideOnClick: false,
@@ -204,11 +196,15 @@ pimcore.layout.toolbar = Class.create({
                     itemId: "server_info",
                     iconCls: "pimcore_icon_server_info",
                     handler: this.showServerInfo
-                }/*,{
-                    text: "MySQL Status",
+                },{
+                    text: "Database Administration",
                     iconCls: "pimcore_icon_mysql",
-                    handler: this.showMysqlStatus
-                }*/]
+                    handler: this.showAdminer
+                },{
+                    text: t("server_fileexplorer"),
+                    iconCls: "pimcore_icon_fileexplorer",
+                    handler: this.showFilexplorer
+                }]
             });
         }
 
@@ -257,12 +253,21 @@ pimcore.layout.toolbar = Class.create({
             });
         }
 
-        if (user.isAllowed("users")) {
+        if (user.admin) {
             settingsItems.push({
-                text: t("users"),
+                text: t("users") + " / " + t("roles"),
                 itemId: "users",
                 iconCls: "pimcore_icon_users",
-                handler: this.editUsers
+                hideOnClick: false,
+                menu: [{
+                    text: t("users"),
+                    handler: this.editUsers,
+                    iconCls: "pimcore_icon_users"
+                }, {
+                    text: t("roles"),
+                    handler: this.editRoles,
+                    iconCls: "pimcore_icon_roles"
+                }]
             });
         } else {
             settingsItems.push({
@@ -278,6 +283,7 @@ pimcore.layout.toolbar = Class.create({
                 text: t("thumbnails"),
                 iconCls: "pimcore_icon_thumbnails",
                 itemId: "pimcore_icon_thumbnails",
+                hideOnClick: false,
                 menu : [{
                     text: t("image_thumbnails"),
                     iconCls: "pimcore_icon_thumbnails",
@@ -289,7 +295,6 @@ pimcore.layout.toolbar = Class.create({
                 }]
             });
         }
-
 
         if (user.isAllowed("objects")) {
 
@@ -381,6 +386,15 @@ pimcore.layout.toolbar = Class.create({
             }
 
             settingsItems.push(cacheMenu);
+        }
+
+        // admin translations only for admins
+        if(user.admin) {
+            settingsItems.push({
+                text: t("translations_admin"),
+                iconCls: "pimcore_icon_translations",
+                handler: this.editTranslationsSpecific
+            });
         }
 
         if (user.isAllowed("reports") && user.isAllowed("system_settings")) {
@@ -561,6 +575,16 @@ pimcore.layout.toolbar = Class.create({
         }
     },
 
+    editRoles: function () {
+
+        try {
+            pimcore.globalmanager.get("roles").activate();
+        }
+        catch (e) {
+            pimcore.globalmanager.add("roles", new pimcore.settings.user.role.panel());
+        }
+    },
+
     editProfile: function () {
 
         try {
@@ -723,6 +747,24 @@ pimcore.layout.toolbar = Class.create({
         }
     },
 
+    showDocumentSeo: function () {
+        try {
+            pimcore.globalmanager.get("document_seopanel").activate();
+        }
+        catch (e) {
+            pimcore.globalmanager.add("document_seopanel", new pimcore.document.seopanel());
+        }
+    },
+
+    showRobotsTxt: function () {
+        try {
+            pimcore.globalmanager.get("robotstxt").activate();
+        }
+        catch (e) {
+            pimcore.globalmanager.add("robotstxt", new pimcore.settings.robotstxt());
+        }
+    },
+
     clearCache: function () {
         Ext.Msg.confirm(t('warning'), t('system_performance_stability_warning'), function(btn){
             if (btn == 'yes'){
@@ -819,15 +861,15 @@ pimcore.layout.toolbar = Class.create({
 
     },
 
-    showMysqlStatus: function () {
+    showAdminer: function () {
 
-        var id = "mysqlstatus";
+        var id = "adminer";
 
         try {
             pimcore.globalmanager.get(id).activate();
         }
         catch (e) {
-            pimcore.globalmanager.add(id, new pimcore.tool.genericiframewindow(id, "/admin/reports/system/mysql", "pimcore_icon_mysql", "MySQL Status"));
+            pimcore.globalmanager.add(id, new pimcore.tool.genericiframewindow(id, "/pimcore/modules/3rdparty/adminer/index.php", "pimcore_icon_mysql", "Database Admin"));
         }
 
     }

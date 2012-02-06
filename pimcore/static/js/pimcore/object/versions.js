@@ -34,10 +34,10 @@ pimcore.object.versions = Class.create({
                     field: 'date',
                     direction: 'DESC'
                 },
-                fields: ['id', 'date', 'note', {name:'username', convert: function (v, rec) {
+                fields: ['id', 'date', 'note', {name:'name', convert: function (v, rec) {
                     if (rec.user) {
-                        if (rec.user.username) {
-                            return rec.user.username;
+                        if (rec.user.name) {
+                            return rec.user.name;
                         }
                     }
                     return null;
@@ -51,7 +51,7 @@ pimcore.object.versions = Class.create({
                         var date = new Date(d * 1000);
                         return date.format("Y-m-d H:i:s");
                     }},
-                    {header: t("user"), sortable: true, dataIndex: 'username'},
+                    {header: t("user"), sortable: true, dataIndex: 'name'},
                     {header: t("note"), sortable: true, dataIndex: 'note'}
                 ],
                 stripeRows: true,
@@ -79,6 +79,7 @@ pimcore.object.versions = Class.create({
             var preview = new Ext.Panel({
                 title: t("preview"),
                 region: "center",
+                bodyStyle: "-webkit-overflow-scrolling:touch;",
                 html: '<iframe src="about:blank" frameborder="0" id="object_version_iframe_' + this.object.id + '"></iframe>'
             });
 

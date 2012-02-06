@@ -22,5 +22,5 @@ class Pimcore_Report {
      */
     public static function getConfig() {
         return Pimcore_Config::getReportConfig();
-    }  
+    }
 }

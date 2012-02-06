@@ -88,9 +88,7 @@ class Object_Abstract_Resource extends Element_Resource {
         if (!$this->model->geto_key()) {
             $this->model->setO_key($this->db->lastInsertId());
         }
-        $this->model->save();
-
-
+        //$this->model->save();
     }
 
     /**
@@ -144,7 +142,7 @@ class Object_Abstract_Resource extends Element_Resource {
         $this->db->query("update objects set o_path = replace(o_path," . $this->db->quote($oldPath) . "," . $this->db->quote($this->model->getFullPath()) . ") where o_path like " . $this->db->quote($oldPath . "/%") .";");
 
         //update object child permission paths
-        $this->db->query("update objects_permissions set cpath = replace(cpath," . $this->db->quote($oldPath) . "," . $this->db->quote($this->model->getFullPath()) . ") where cpath like " . $this->db->quote($oldPath . "/%") . ";");
+        $this->db->query("update users_workspaces_object set cpath = replace(cpath," . $this->db->quote($oldPath) . "," . $this->db->quote($this->model->getFullPath()) . ") where cpath like " . $this->db->quote($oldPath . "/%") . ";");
 
         //update object child properties paths
         $this->db->query("update properties set cpath = replace(cpath," . $this->db->quote($oldPath) . "," . $this->db->quote($this->model->getFullPath()) . ") where cpath like " . $this->db->quote($oldPath . "/%") . ";");
@@ -251,135 +249,12 @@ class Object_Abstract_Resource extends Element_Resource {
         return $properties;
     }
 
-
-    /**
-     * @return array
-     *
-     */
-    public function getPermissions() {
-
-        $permissions = array();
-
-        $permissionsRaw = $this->db->fetchAll("SELECT id FROM objects_permissions WHERE cid = ? ORDER BY cpath ASC", $this->model->geto_Id());
-
-        $userIdMappings = array();
-        foreach ($permissionsRaw as $permissionRaw) {
-            $permissions[] = Object_Permissions::getById($permissionRaw["id"]);
-        }
-
-
-        $this->model->setO_Permissions($permissions);
-
-        return $permissions;
-    }
-
-
     /**
      *
      * @return void
      */
     public function deleteAllPermissions() {
-        $this->db->delete("objects_permissions", $this->db->quoteInto("cid = ?", $this->model->getO_Id()));
-    }
-
-    /**
-     * get recursively the permissions for the passed user under consideration of the parent user group
-     *
-     * @param User $user
-     * @return Object_Permissions
-     */
-    public function getPermissionsForUser(User $user) {
-
-        $pathParts = explode("/", $this->model->getO_Path() . $this->model->getO_Key());
-        unset($pathParts[0]);
-        $tmpPathes = array();
-        $pathConditionParts[] = "cpath = '/'";
-        foreach ($pathParts as $pathPart) {
-            $tmpPathes[] = $pathPart;
-            $pathConditionParts[] = $this->db->quoteInto("cpath = ?", "/" . implode("/", $tmpPathes));
-        }
-
-        $pathCondition = implode(" OR ", $pathConditionParts);
-
-        $permissionRaw = $this->db->fetchRow("SELECT id FROM objects_permissions WHERE (" . $pathCondition . ") AND userId = ? ORDER BY cpath DESC LIMIT 1",  $user->getId());
-
-        //path condition for parent object
-        $parentObjectPathParts = array_slice($pathParts, 0, -1);
-        $parentObjectPathConditionParts[] = "cpath = '/'";
-        foreach ($parentObjectPathParts as $parentObjectPathPart) {
-            $parentObjectTmpPaths[] = $parentObjectPathPart;
-            $parentObjectPathConditionParts[] = $this->db->quoteInto("cpath = ?", "/" . implode("/", $parentObjectTmpPaths));
-        }
-        $parentObjectPathCondition = implode(" OR ", $parentObjectPathConditionParts);
-        $parentObjectPermissionRaw = $this->db->fetchRow("SELECT id FROM objects_permissions WHERE (" . $parentObjectPathCondition . ") AND userId = ? ORDER BY cpath DESC LIMIT 1", $user->getId());
-        $parentObjectPermissions = new Object_Permissions();
-        if ($parentObjectPermissionRaw["id"]) {
-            $parentObjectPermissions = Object_Permissions::getById($parentObjectPermissionRaw["id"]);
-        }
-
-
-        $parentUser = $user->getParent();
-        if ($parentUser instanceof User and $parentUser->isAllowed("objects")) {
-            $parentPermission = $this->getPermissionsForUser($parentUser);
-        } else $parentPermission = null;
-
-        $permission = new Object_Permissions();
-
-        if ($permissionRaw["id"] and $parentPermission instanceof Object_Permissions) {
-
-            //consider user group permissions
-            $permission = Object_Permissions::getById($permissionRaw["id"]);
-            $permissionKeys = $permission->getValidPermissionKeys();
-
-            foreach ($permissionKeys as $key) {
-                $getter = "get" . ucfirst($key);
-                $setter = "set" . ucfirst($key);
-
-                if ((!$permission->getList() and !$parentPermission->getList())  or !$parentObjectPermissions->getList()) {
-                    //no list - return false for all
-                    $permission->$setter(false);
-                } else if ($parentPermission->$getter()) {
-                    //if user group allows -> return true, it overrides the user permission!
-                    $permission->$setter(true);
-                }
-            }
-
-
-        } else if ($permissionRaw["id"]) {
-            //use user permissions, no user group to override anything
-            $permission = Object_Permissions::getById($permissionRaw["id"]);
-            //check parent object's list permission and current list permission
-            if (!$parentObjectPermissions->getList() or !$permission->getList()) {
-                $permissionKeys = $permission->getValidPermissionKeys();
-                foreach ($permissionKeys as $key) {
-                    $setter = "set" . ucfirst($key);
-                    $permission->$setter(false);
-                }
-            }
-
-        } else if ($parentPermission instanceof Object_Permissions and $parentPermission->getId() > 0) {
-            //use user group permissions - no permission found for user at all
-            $permission = $parentPermission;
-            if (!$parentObjectPermissions->getList() or !$permission->getList()) {
-                $permissionKeys = $permission->getValidPermissionKeys();
-                foreach ($permissionKeys as $key) {
-                    $setter = "set" . ucfirst($key);
-                    $permission->$setter(false);
-                } 
-            }
-
-        } else {
-            //neither user group nor user has permissions set -> use default all allowed
-            $permission->setUser($user);
-            $permission->setUserId($user->getId());
-            $permission->setUsername($user->getUsername());
-            $permission->setCid($this->model->getId());
-            $permission->setCpath($this->model->getFullPath());
-
-        }
-
-        $this->model->setO_UserPermissions($permission);
-        return $permission;
+        $this->db->delete("users_workspaces_object", $this->db->quoteInto("cid = ?", $this->model->getO_Id()));
     }
 
     /**
@@ -458,6 +333,45 @@ class Object_Abstract_Resource extends Element_Resource {
         }
 
         return $classes;
-    }    
+    }
+
+    public function isAllowed($type, $user) {
+
+        // collect properties via parent - ids
+        $parentIds = array(1);
+
+        $obj = $this->model->getParent();
+        if($obj) {
+            while($obj) {
+                $parentIds[] = $obj->getId();
+                $obj = $obj->getParent();
+            }
+        }
+        $parentIds[] = $this->model->getId();
+
+        $userIds = $user->getRoles();
+        $userIds[] = $user->getId();
+
+        try {
+            $permissionsParent = $this->db->fetchOne("SELECT `" . $type . "` FROM users_workspaces_object WHERE cid IN (".implode(",",$parentIds).") AND userId IN (" . implode(",",$userIds) . ") ORDER BY LENGTH(cpath) DESC LIMIT 1");
+
+            if($permissionsParent) {
+                return true;
+            }
+
+            // exception for list permission
+            if(empty($permissionsParent) && $type == "list") {
+                // check for childs with permissions
+                $permissionsChilds = $this->db->fetchOne("SELECT list FROM users_workspaces_object WHERE cpath LIKE ? AND userId IN (" . implode(",",$userIds) . ") LIMIT 1", $this->model->getFullPath()."%");
+                if($permissionsChilds) {
+                    return true;
+                }
+            }
+        } catch (Exception $e) {
+            Logger::warn("Unable to get permission " . $type . " for object " . $this->model->getId());
+        }
+
+        return false;
+    }
 
 }

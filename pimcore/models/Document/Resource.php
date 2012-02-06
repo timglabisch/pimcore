@@ -74,7 +74,13 @@ class Document_Resource extends Element_Resource {
             $this->assignVariablesToModel($data);
         }
         else {
-            throw new Exception("document with path $path doesn't exist");
+            // try to find a page with a pretty URL (use the original $path)
+            $data = $this->db->fetchRow("SELECT id FROM documents_page WHERE prettyUrl = " . $this->db->quote($path));
+            if ($data["id"]) {
+                $this->assignVariablesToModel($data);
+            } else {
+                throw new Exception("document with path $path doesn't exist");
+            }
         }
     }
 
@@ -175,7 +181,7 @@ class Document_Resource extends Element_Resource {
         $this->db->query("update documents set path = replace(path," . $this->db->quote($oldPath) . "," . $this->db->quote($this->model->getFullPath()) . ") where path like " . $this->db->quote($oldPath . "/%") . ";");
 
         //update documents child permission paths
-        $this->db->query("update documents_permissions set cpath = replace(cpath," . $this->db->quote($oldPath) . "," . $this->db->quote($this->model->getFullPath()) . ") where cpath like " . $this->db->quote($oldPath . "/%") .";");
+        $this->db->query("update users_workspaces_document set cpath = replace(cpath," . $this->db->quote($oldPath) . "," . $this->db->quote($this->model->getFullPath()) . ") where cpath like " . $this->db->quote($oldPath . "/%") .";");
 
         //update documents child properties paths
         $this->db->query("update properties set cpath = replace(cpath," . $this->db->quote($oldPath) . "," . $this->db->quote($this->model->getFullPath()) . ") where cpath like " . $this->db->quote($oldPath . "/%" ) . ";");
@@ -289,130 +295,10 @@ class Document_Resource extends Element_Resource {
     }
 
     /**
-     * get recursivly the permissions for the passed user
-     *
-     * @param User $user
-     * @return Document_Permission
-     */
-    public function getPermissionsForUser(User $user) {
-        $pathParts = explode("/", $this->model->getRealFullPath());
-        unset($pathParts[0]);
-        $tmpPathes = array();
-        $pathConditionParts[] = "cpath = '/'";
-        foreach ($pathParts as $pathPart) {
-            $tmpPathes[] = $pathPart;
-            $pathConditionParts[] = $this->db->quoteInto("cpath = ?", "/" . implode("/", $tmpPathes));
-        }
-        $pathCondition = implode(" OR ", $pathConditionParts);
-        $permissionRaw = $this->db->fetchRow("SELECT id FROM documents_permissions WHERE (" . $pathCondition . ") AND userId = ? ORDER BY cpath DESC LIMIT 1", $user->getId());
-
-        //path condition for parent document
-        $parentDocumentPathParts = array_slice($pathParts, 0, -1);
-        $parentDocumentPathConditionParts[] = "cpath = '/'";
-        foreach ($parentDocumentPathParts as $parentDocumentPathPart) {
-            $parentDocumentTmpPaths[] = $parentDocumentPathPart;
-            $parentDocumentPathConditionParts[] = $this->db->quoteInto("cpath = ?", "/" . implode("/", $parentDocumentTmpPaths));
-        }
-        $parentDocumentPathCondition = implode(" OR ", $parentDocumentPathConditionParts);
-        $parentDocumentPermissionRaw = $this->db->fetchRow("SELECT id FROM documents_permissions WHERE (" . $parentDocumentPathCondition . ") AND userId = ? ORDER BY cpath DESC LIMIT 1", $user->getId());
-        $parentDocumentPermissions = new Document_Permissions();
-        if ($parentDocumentPermissionRaw["id"]) {
-            $parentDocumentPermissions = Document_Permissions::getById($parentDocumentPermissionRaw["id"]);
-        }
-
-        $parentUser = $user->getParent();
-        if ($parentUser instanceof User and $parentUser->isAllowed("documents")) {
-            $parentPermission = $this->getPermissionsForUser($parentUser);
-        } else $parentPermission = null;
-
-        $permission = new Document_Permissions();
-        if ($permissionRaw["id"] and $parentPermission instanceof Document_Permissions) {
-
-            //consider user group permissions
-            $permission = Document_Permissions::getById($permissionRaw["id"]);
-            $permissionKeys = $permission->getValidPermissionKeys();
-
-            foreach ($permissionKeys as $key) {
-                $getter = "get" . ucfirst($key);
-                $setter = "set" . ucfirst($key);
-
-                if ((!$permission->getList() and !$parentPermission->getList()) or  !$parentDocumentPermissions->getList()) {
-                    //no list - return false for all
-                    $permission->$setter(false);
-                } else if ($parentPermission->$getter()) {
-                    //if user group allows -> return true, it overrides the user permission!
-                    $permission->$setter(true);
-                }
-            }
-
-
-        } else if ($permissionRaw["id"]) {
-            //use user permissions, no user group to override anything
-            $permission = Document_Permissions::getById($permissionRaw["id"]);
-
-            //check parent document's list permission
-            if (!$parentDocumentPermissions->getList() or !$permission->getList()) {
-                $permissionKeys = $permission->getValidPermissionKeys();
-                foreach ($permissionKeys as $key) {
-                    $setter = "set" . ucfirst($key);
-                    $permission->$setter(false);
-                }
-            }
-
-        } else if ($parentPermission instanceof Document_Permissions and $parentPermission->getId() > 0) {
-            //use user group permissions - no permission found for user at all
-            $permission = $parentPermission;
-            //check parent document's list permission
-            if (!$parentDocumentPermissions->getList() or !$permission->getList()) {
-                $permissionKeys = $permission->getValidPermissionKeys();
-                foreach ($permissionKeys as $key) {
-                    $setter = "set" . ucfirst($key);
-                    $permission->$setter(false);
-                }
-            }
-
-        } else {
-            //neither user group nor user has permissions set -> use default all allowed
-            $permission->setUser($user);
-            $permission->setUserId($user->getId());
-            $permission->setUsername($user->getUsername());
-            $permission->setCid($this->model->getId());
-            $permission->setCpath($this->model->getFullPath());
-
-        }
-
-
-        $this->model->setUserPermissions($permission);
-
-        return $permission;
-    }
-
-    /**
-     * @return array
-     */
-
-    public function getPermissions() {
-
-        $permissions = array();
-
-        $permissionsRaw = $this->db->fetchAll("SELECT id FROM documents_permissions WHERE cid = ? ORDER BY cpath ASC", $this->model->getId());
-
-        $userIdMappings = array();
-        foreach ($permissionsRaw as $permissionRaw) {
-            $permissions[] = Document_Permissions::getById($permissionRaw["id"]);
-        }
-
-
-        $this->model->setPermissions($permissions);
-
-        return $permissions;
-    }
-
-    /**
      * @return void
      */
     public function deleteAllPermissions() {
-        $this->db->delete("documents_permissions", $this->db->quoteInto("cid = ?", $this->model->getId()));
+        $this->db->delete("users_workspaces_document", $this->db->quoteInto("cid = ?", $this->model->getId()));
     }
 
     /**
@@ -477,6 +363,45 @@ class Document_Resource extends Element_Resource {
         }
         
         
+        return false;
+    }
+
+    public function isAllowed($type, $user) {
+
+        // collect properties via parent - ids
+        $parentIds = array(1);
+
+        $obj = $this->model->getParent();
+        if($obj) {
+            while($obj) {
+                $parentIds[] = $obj->getId();
+                $obj = $obj->getParent();
+            }
+        }
+        $parentIds[] = $this->model->getId();
+
+        $userIds = $user->getRoles();
+        $userIds[] = $user->getId();
+
+        try {
+            $permissionsParent = $this->db->fetchOne("SELECT `" . $type . "` FROM users_workspaces_document WHERE cid IN (".implode(",",$parentIds).") AND userId IN (" . implode(",",$userIds) . ") ORDER BY LENGTH(cpath) DESC LIMIT 1");
+
+            if($permissionsParent) {
+                return true;
+            }
+
+            // exception for list permission
+            if(empty($permissionsParent) && $type == "list") {
+                // check for childs with permissions
+                $permissionsChilds = $this->db->fetchOne("SELECT list FROM users_workspaces_document WHERE cpath LIKE ? AND userId IN (" . implode(",",$userIds) . ") LIMIT 1", $this->model->getFullPath()."%");
+                if($permissionsChilds) {
+                    return true;
+                }
+            }
+        } catch (Exception $e) {
+            Logger::warn("Unable to get permission " . $type . " for document " . $this->model->getId());
+        }
+
         return false;
     }
 

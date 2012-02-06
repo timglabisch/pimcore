@@ -88,7 +88,6 @@ class Install_IndexController extends Pimcore_Controller_Action {
                     "debug" => "1",
                     "theme" => "/pimcore/static/js/lib/ext/resources/css/xtheme-gray.css",
                     "loginscreenimageservice" => "1",
-                    "welcomescreen" => "1",
                     "loglevel" => array(
                         "debug" => "1",
                         "info" => "1",
@@ -116,7 +115,9 @@ class Install_IndexController extends Pimcore_Controller_Action {
                     ),
                     "default_controller" => "default",
                     "default_action" => "default",
-                    "error_page" => "/",
+                    "error_pages" => array(
+                        "default" => "/"
+                    ),
                     "allowtrailingslash" => "no",
                     "allowcapitals" => "no"
                 ),
@@ -217,82 +218,34 @@ class Install_IndexController extends Pimcore_Controller_Action {
                 "o_userModification" => 1
             ));
 
+
+            $db->insert("users", array(
+                "parentId" => 0,
+                "name" => "system",
+                "admin" => 1,
+                "active" => 1
+            ));
+            $db->update("users",array("id" => 0), $db->quoteInto("name = ?", "system"));
+
+
             $userPermissions = array(
-                array(
-                    "key" =>            "assets",
-                    "translation" =>    "permission_assets"
-                ),
-                array(
-                    "key" =>            "classes",
-                    "translation" =>    "permission_classes"
-                ),
-                array(
-                    "key" =>            "clear_cache",
-                    "translation" =>    "permission_clear_cache"
-                ),
-                array(
-                    "key" =>            "clear_temp_files",
-                    "translation" =>    "permission_clear_temp_files"
-                ),
-                array(
-                    "key" =>            "document_types",
-                    "translation" =>    "permission_document_types"
-                ),
-                array(
-                    "key" =>            "documents",
-                    "translation" =>    "permission_documents"
-                ),
-                array(
-                    "key" =>            "objects",
-                    "translation" =>    "permission_objects"
-                ),
-                array(
-                    "key" =>            "plugins",
-                    "translation" =>    "permission_plugins"
-                ),
-                array(
-                    "key" =>            "predefined_properties",
-                    "translation" =>    "permission_predefined_properties"
-                ),
-                array(
-                    "key" =>            "routes",
-                    "translation" =>    "permission_routes"
-                ),
-                array(
-                    "key" =>            "seemode",
-                    "translation" =>    "permission_seemode"
-                ),
-                array(
-                    "key" =>            "system_settings",
-                    "translation" =>    "permission_system_settings"
-                ),
-                array(
-                    "key" =>            "thumbnails",
-                    "translation" =>    "permission_thumbnails"
-                ),
-                array(
-                    "key" =>            "translations",
-                    "translation" =>    "permission_translations"
-                ),
-                array(
-                    "key" =>            "users",
-                    "translation" =>    "permission_users"
-                ),
-                array(
-                    "key" =>            "update",
-                    "translation" =>    "permissions_update"
-                ),
-                array(
-                    "key" =>            "redirects",
-                    "translation" =>    "permissions_redirects"
-                ),array(
-                    "key" =>            "glossary",
-                    "translation" =>    "permissions_glossary"
-                ),
-                array(
-                    "key" =>            "reports",
-                    "translation" =>    "permissions_reports_marketing"
-                )
+                array("key" => "assets"),
+                array("key" => "classes"),
+                array("key" => "clear_cache"),
+                array("key" => "clear_temp_files"),
+                array("key" => "document_types"),
+                array("key" => "documents"),
+                array("key" => "objects"),
+                array("key" => "plugins"),
+                array("key" => "predefined_properties"),
+                array("key" => "routes"),
+                array("key" => "seemode"),
+                array("key" => "system_settings"),
+                array("key" => "thumbnails"),
+                array("key" => "translations"),
+                array("key" => "redirects"),
+                array("key" => "glossary" ),
+                array("key" => "reports")
             );
             foreach ($userPermissions as $up) {
                 $db->insert("users_permission_definitions", $up);
@@ -305,7 +258,6 @@ class Install_IndexController extends Pimcore_Controller_Action {
                 "parentId" => 0,
                 "username" => $this->_getParam("admin_username"),
                 "password" => Pimcore_Tool_Authentication::getPasswordHash($this->_getParam("admin_username"),$this->_getParam("admin_password")),
-                "hasCredentials" => true,
                 "active" => true
             ));
             $user->setAdmin(true);

@@ -28,7 +28,6 @@ pimcore.object.object = Class.create(pimcore.object.abstract, {
         this.properties = new pimcore.element.properties(this, "object");
         this.versions = new pimcore.object.versions(this);
         this.scheduler = new pimcore.element.scheduler(this, "object");
-        this.permissions = new pimcore.object.permissions(this);
         this.dependencies = new pimcore.element.dependencies(this, "object");
         this.reports = new pimcore.report.panel("object_concrete", this);
         this.variants = new pimcore.object.variantsTab(this);
@@ -161,6 +160,7 @@ pimcore.object.object = Class.create(pimcore.object.abstract, {
         // remove this instance when the panel is closed
         this.tab.on("destroy", function () {
             pimcore.globalmanager.remove("object_" + this.id);
+            pimcore.helpers.forgetOpenTab("object_" + this.id + "_object");
         }.bind(this));
 
         this.tab.on("afterrender", function (tabId) {
@@ -195,9 +195,7 @@ pimcore.object.object = Class.create(pimcore.object.abstract, {
         if (this.isAllowed("settings")) {
             items.push(this.scheduler.getLayout());
         }
-        if (this.isAllowed("permissions")) {
-            items.push(this.permissions.getLayout());
-        }
+
         items.push(this.dependencies.getLayout());
         
         var reportLayout = this.reports.getLayout();
@@ -242,11 +240,11 @@ pimcore.object.object = Class.create(pimcore.object.abstract, {
                 text: t('save'),
                 iconCls: "pimcore_icon_save_medium",
                 scale: "medium",
-                handler: this.save.bind(this),
+                handler: this.unpublish.bind(this),
                 menu:[{
                         text: t('save_close'),
                         iconCls: "pimcore_icon_save",
-                        handler: this.saveClose.bind(this)
+                        handler: this.unpublishClose.bind(this)
                     }]
             });
 
@@ -289,12 +287,12 @@ pimcore.object.object = Class.create(pimcore.object.abstract, {
                 handler: this.reload.bind(this)
             });
 
-            /*this.toolbarButtons.remove = new Ext.Button({
-             text: t("delete"),
-             iconCls: "pimcore_icon_delete_medium",
-             scale: "medium",
-             handler: this.remove.bind(this)
-             });*/
+            this.toolbarButtons.remove = new Ext.Button({
+                text: t("delete"),
+                iconCls: "pimcore_icon_delete_medium",
+                scale: "medium",
+                handler: this.remove.bind(this)
+            });
 
             if (this.isAllowed("save")) {
                 buttons.push(this.toolbarButtons.save);
@@ -306,9 +304,9 @@ pimcore.object.object = Class.create(pimcore.object.abstract, {
                 buttons.push(this.toolbarButtons.unpublish);
             }
 
-            /*if(this.isAllowed("delete")) {
-             buttons.push(this.toolbarButtons.remove);
-             }*/
+            if(this.isAllowed("delete")) {
+                buttons.push(this.toolbarButtons.remove);
+            }
 
             buttons.push(this.toolbarButtons.reload);
 
@@ -471,6 +469,12 @@ pimcore.object.object = Class.create(pimcore.object.abstract, {
         }
     },
 
+    unpublishClose: function () {
+        this.unpublish();
+        var tabPanel = Ext.getCmp("pimcore_panel_tabs");
+        tabPanel.remove(this.tab);
+    },
+
     saveToSession: function (callback) {
         this.save("session", null, callback);
     },
@@ -532,12 +536,7 @@ pimcore.object.object = Class.create(pimcore.object.abstract, {
 
 
     remove: function () {
-        var tabPanel = Ext.getCmp("pimcore_panel_tabs");
-        tabPanel.remove(this.tab);
-
-        var objectNode = pimcore.globalmanager.get("layout_object_tree").tree.getNodeById(this.id)
-        var f = pimcore.globalmanager.get("layout_object_tree").remove.bind(objectNode);
-        f();
+        pimcore.helpers.deleteObject(this.id);
     },
 
     isAllowed: function (key) {

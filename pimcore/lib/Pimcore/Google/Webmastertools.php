@@ -24,31 +24,10 @@ class Pimcore_Google_Webmastertools {
         return false;
     }
     
-    public static function getSiteKey (Site $site = null) {
-        // check for site
-        if(!$site) {
-            try {
-                $site = Zend_Registry::get("pimcore_site");
-            }
-            catch (Exception $e) {
-                $site = false;
-            }
-        }
-        
-        
-        if($site) {
-            $siteKey = "site_" . $site->getId();
-        }
-        else {
-            $siteKey = "default";
-        }
-        
-        return $siteKey;
-    }
-    
+
     public static function getSiteConfig ($site = null) {
         
-        $siteKey = self::getSiteKey($site);
+        $siteKey = Pimcore_Tool_Frontend::getSiteKey($site);
         
         if(Pimcore_Config::getReportConfig()->webmastertools->sites->$siteKey->profile) {
             return Pimcore_Config::getReportConfig()->webmastertools->sites->$siteKey;

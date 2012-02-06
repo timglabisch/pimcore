@@ -89,16 +89,6 @@ class Search_Backend_Data extends Pimcore_Model_Abstract {
     public $properties;
 
     /**
-     * @var string
-     */
-    public $localizedData;
-
-    /**
-     * @var string
-     */
-    public $fieldcollectionData;
-
-    /**
      * @param  Element_Interface $element
      * @return void
      */
@@ -273,37 +263,6 @@ class Search_Backend_Data extends Pimcore_Model_Abstract {
         $this->data = $data;
     }
 
-
-    /**
-     * @return string
-     */
-    public function getLocalizedData(){
-        return $this->localizedData;
-    }
-
-    /**
-     * @param  string $data
-     * @return void
-     */
-    public function setLocalizedData($data){
-        $this->localizedData = $data;
-    }
-
-    /**
-     * @return string
-     */
-    public function getFieldcollectionData(){
-        return $this->fieldcollectionData;
-    }
-
-    /**
-     * @param  string $data
-     * @return void
-     */
-    public function setFieldcollectionData($data){
-        $this->fieldcollectionData = $data;
-    }
-
     /**
     * @return string
     */
@@ -327,87 +286,165 @@ class Search_Backend_Data extends Pimcore_Model_Abstract {
      */
     public function setDataFromElement($element){
 
-            $this->data = null;
+        $this->data = null;
 
-            $this->id = new Search_Backend_Data_Id($element);
-            $this->fullPath = $element->getFullPath();
-            $this->creationDate=$element->getCreationDate();
-            $this->modificationDate=$element->getModificationDate();
-            $this->userModification = $element->getUserModification();
-            $this->userOwner = $element->getUserOwner();
+        $this->id = new Search_Backend_Data_Id($element);
+        $this->fullPath = $element->getFullPath();
+        $this->creationDate=$element->getCreationDate();
+        $this->modificationDate=$element->getModificationDate();
+        $this->userModification = $element->getUserModification();
+        $this->userOwner = $element->getUserOwner();
 
-            $this->type = $element->getType();
-            if($element instanceof Object_Concrete){
-                $this->subtype = $element->getO_className();
-            } else {
-                $this->subtype = $this->type;
-            }
+        $this->type = $element->getType();
+        if($element instanceof Object_Concrete){
+            $this->subtype = $element->getO_className();
+        } else {
+            $this->subtype = $this->type;
+        }
 
-            $properties = $element->getProperties();
-            if(is_array($properties)){
-                foreach($properties as $nextProperty){
-                    if($nextProperty->getType() == 'text'){
-                        $this->properties.=$nextProperty->getData()." ";
-                    }
+        $this->properties = "";
+        $properties = $element->getProperties();
+        if(is_array($properties)){
+            foreach($properties as $nextProperty){
+                if($nextProperty->getType() == 'text'){
+                    $this->properties.=$nextProperty->getData()." ";
                 }
             }
+        }
 
-            if($element instanceof Document){
-                if($element instanceof Document_Folder){
-                    $this->data = $element->getKey();
-                    $this->published = true;
-                } else if ($element instanceof Document_Link){
+        $this->data = "";
+        if($element instanceof Document){
+            if($element instanceof Document_Folder){
+                $this->data = $element->getKey();
+                $this->published = true;
+            } else if ($element instanceof Document_Link){
+                $this->published = $element->isPublished();
+                $this->data = $element->getName()." ".$element->getTitle()." ".$element->getHref();
+            } else if ($element instanceof Document_PageSnippet){
+                $this->published = $element->isPublished();
+                $elements = $element->getElements();
+                if(is_array($elements)){
+                    foreach($elements as $tag){
+                        if($tag instanceof Document_Tag_Interface){
+                            ob_start();
+                            $this->data .= strip_tags($tag->frontend())." ";
+                            $this->data .= ob_get_clean();
+                        }
+                    }
+                }
+                if($element instanceof Document_Page){
                     $this->published = $element->isPublished();
-                    $this->data = $element->getName()." ".$element->getTitle()." ".$element->getHref();
-                } else if ($element instanceof Document_PageSnippet){
-                    $this->published = $element->isPublished();
-                    $elements = $element->getElements();
-                    if(is_array($elements)){
-                        foreach($elements as $tag){
-                            if($tag instanceof Document_Tag_Interface){
-                                ob_start();
-                                $this->data .= strip_tags($tag->frontend())." ";
-                                $this->data .= ob_get_clean();
+                    $this->data.=" ".$element->getName()." ".$element->getTitle()." ".$element->getDescription()." ".$element->getKeywords();
+                }
+            }
+        } else if($element instanceof Asset) {
+            $this->data = $element->getFilename();
+            $this->published = true;
+        } else if ($element instanceof Object_Abstract){
+            if ($element instanceof Object_Concrete) {
+                $getInheritedValues = Object_Abstract::doGetInheritedValues();
+                Object_Abstract::setGetInheritedValues(true);
+
+                $this->published = $element->isPublished();
+                foreach ($element->getClass()->getFieldDefinitions() as $key => $value) {
+                    // Object_Class_Data_Fieldcollections, Object_Class_Data_Localizedfields and Object_Class_Data_Objectbricks is special because it doesn't support the csv export
+                    if($value instanceof Object_Class_Data_Fieldcollections) {
+                        $getter = "get".$value->getName();
+
+                        $fcData = $element->$getter();
+                        if ($fcData instanceof Object_Fieldcollection) {
+                            foreach ($fcData as $item) {
+
+                                if (!$item instanceof Object_Fieldcollection_Data_Abstract) {
+                                    continue;
+                                }
+
+                                try {
+                                    $collectionDef = Object_Fieldcollection_Definition::getByKey($item->getType());
+                                } catch (Exception $e) {
+                                    continue;
+                                }
+
+                                foreach ($collectionDef->getFieldDefinitions() as $fd) {
+                                    $this->data .= $fd->getForCsvExport($item) . " ";
+                                }
                             }
                         }
-                    }
-                    if($element instanceof Document_Page){
-                        $this->published = $element->isPublished();
-                        $this->data.=" ".$element->getName()." ".$element->getTitle()." ".$element->getDescription()." ".$element->getKeywords();
-                    }
-                }
-            } else if($element instanceof Asset) {
-                $this->data = $element->getFilename();
-                $this->published = true;
-            } else if ($element instanceof Object_Abstract){
-                if ($element instanceof Object_Concrete) {
-                    $getInheritedValues = Object_Abstract::doGetInheritedValues();
-                    Object_Abstract::setGetInheritedValues(true);
+                        //$this->data .= Pimcore_Tool_Serialize::serialize($value->getDataForEditmode($element->$getter(), $element))." ";
+                    } else if ($value instanceof Object_Class_Data_Localizedfields){
 
-                    $this->published = $element->isPublished();
-                    foreach ($element->getClass()->getFieldDefinitions() as $key => $value) {
-                        // Object_Class_Data_Fieldcollections is special because it doesn't support the csv export
-                        if($value instanceof Object_Class_Data_Fieldcollections) {
-                            $getter = "get".$value->getName();
-                            $this->fieldcollectionData.= Pimcore_Tool_Serialize::serialize($value->getDataForEditmode($element->$getter(), $element))." ";
-                        } else if ($value instanceof Object_Class_Data_Localizedfields){
+                        // only for text-values at the moment, because the CSV doesn't work for localized fields (getter-problem)
+                        $getter = "get".$value->getName();
 
-                            $getter = "get".$value->getName();
-                            $this->localizedData.= Pimcore_Tool_Serialize::serialize($value->getDataForEditmode($element->$getter(), $element))." ";
-                        } else {
-                            $this->data.=$value->getForCsvExport($element)." ";
+                        $lfData = $element->$getter();
+                        if ($lfData instanceof Object_Localizedfield) {
+                            foreach ($lfData->getItems() as $language => $values) {
+                                foreach ($values as $lData) {
+                                    if(is_string($lData)) {
+                                        $this->data .= $lData . " ";
+                                    }
+                                }
+                            }
                         }
-                    }
-                    Object_Abstract::setGetInheritedValues($getInheritedValues);
-                    
-                } else if ($element instanceof Object_Folder){
-                    $this->data=$element->getKey();
-                    $this->published = true;
-                }
-            } else {
-                Logger::crit("Search_Backend_Data received an unknown element!");
-            }
+                        //$this->data .= Pimcore_Tool_Serialize::serialize($value->getDataForEditmode($element->$getter(), $element))." ";
+                    } else if ($value instanceof Object_Class_Data_Objectbricks){
+                        $getter = "get".$value->getName();
 
+                        $obData = $element->$getter();
+                        if ($obData instanceof Object_Objectbrick) {
+                            $items = $obData->getItems();
+                            foreach ($items as $item) {
+                                if (!$item instanceof Object_Objectbrick_Data_Abstract) {
+                                    continue;
+                                }
+
+                                try {
+                                    $collectionDef = Object_Objectbrick_Definition::getByKey($item->getType());
+                                } catch (Exception $e) {
+                                    continue;
+                                }
+
+                                foreach ($collectionDef->getFieldDefinitions() as $fd) {
+                                    $this->data .= $fd->getForCsvExport($item) . " ";
+                                }
+                            }
+                        }
+
+                        //$this->data .= Pimcore_Tool_Serialize::serialize($value->getDataForEditmode($element->$getter(), $element))." ";
+                    } else {
+                        $this->data .= $value->getForCsvExport($element)." ";
+                    }
+                }
+                Object_Abstract::setGetInheritedValues($getInheritedValues);
+
+            } else if ($element instanceof Object_Folder){
+                $this->data=$element->getKey();
+                $this->published = true;
+            }
+        } else {
+            Logger::crit("Search_Backend_Data received an unknown element!");
+        }
+
+        if($element instanceof Element_Interface) {
+            $this->data = "ID: " . $element->getId() . "  \nPath: " . $this->getFullPath() . "  \n"  . $this->cleanupData($this->data);
+        }
+
+
+    }
+
+    /**
+     * @param $data
+     */
+    protected function cleanupData ($data) {
+
+        $data = strip_tags($data);
+        $data = str_replace("\r\n", " ", $data);
+        $data = str_replace("\n", " ", $data);
+        $data = str_replace("\r", " ", $data);
+        $data = str_replace("\t", "", $data);
+        $data = preg_replace ('#[ ]+#', ' ', $data);
+
+        return $data;
     }
 
     /**

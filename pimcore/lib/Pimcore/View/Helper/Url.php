@@ -9,8 +9,6 @@
  * It is also available through the world-wide-web at this URL:
  * http://www.pimcore.org/license
  *
- * @category   Pimcore
- * @package    Staticroute
  * @copyright  Copyright (c) 2009-2010 elements.at New Media Solutions GmbH (http://www.elements.at)
  * @license    http://www.pimcore.org/license     New BSD License
  */
@@ -50,6 +48,10 @@ class Pimcore_View_Helper_Url extends Zend_View_Helper_Url {
         }
 
         
-        return parent::url($urlOptions, $name, $reset, $encode);
+        try {
+            return parent::url($urlOptions, $name, $reset, $encode);
+        } catch (Exception $e) {
+            throw new Exception("Route '".$name."' for building the URL not found");
+        }
     }    
 }

@@ -28,7 +28,6 @@ pimcore.asset.image = Class.create(pimcore.asset.asset, {
         this.properties = new pimcore.element.properties(this, "asset");
         this.versions = new pimcore.asset.versions(this);
         this.scheduler = new pimcore.element.scheduler(this, "asset");
-        this.permissions = new pimcore.asset.permissions(this);
         this.dependencies = new pimcore.element.dependencies(this, "asset");
 
         this.getData();
@@ -55,9 +54,7 @@ pimcore.asset.image = Class.create(pimcore.asset.asset, {
         if (this.isAllowed("settings")) {
             items.push(this.scheduler.getLayout());
         }
-        if (this.isAllowed("permissions")) {
-            items.push(this.permissions.getLayout());
-        }
+
         items.push(this.dependencies.getLayout());
 
         this.tabbar = new Ext.TabPanel({
@@ -121,7 +118,7 @@ pimcore.asset.image = Class.create(pimcore.asset.asset, {
 
         var imageUrl = document.location.protocol + "//" + window.location.hostname + "/admin/asset/get-image-thumbnail/id/" + this.id + "/width/1000/aspectratio/true/pimcore_admin_sid/" + pimcore.settings.sessionId + "/" + this.data.filename;
         var targetUrl = document.location.protocol + "//" + window.location.hostname + "/admin/asset/save-image-pixlr/?pimcore_admin_sid=" + pimcore.settings.sessionId + "&id=" + this.id;
-        var editorUrl = "http://www.pixlr.com/" + type + "/?image=" + escape(imageUrl) + "&title=" + this.data.filename + "&locktitle=true&locktarget=true&locktype=" + imageType + "&wmode=transparent&target=" + escape(targetUrl);
+        var editorUrl = "https://www.pixlr.com/" + type + "/?image=" + escape(imageUrl) + "&title=" + this.data.filename + "&locktitle=true&locktarget=true&locktype=" + imageType + "&wmode=transparent&target=" + escape(targetUrl);
 
         if (type == "editor") {
             editorUrl = editorUrl + "&redirect=false";
@@ -197,12 +194,14 @@ pimcore.asset.image = Class.create(pimcore.asset.asset, {
                         title: t("dimensions"),
                         source: this.data.imageInfo.dimensions,
                         autoHeight: true,
+
                         clicksToEdit: 1000,
                         viewConfig : {
                             forceFit: true,
                             scrollOffset: 2
                         }
                     });
+                    dimensionPanel.getStore().singleSort("name","DESC");
 
                     details.push(dimensionPanel);
                 }

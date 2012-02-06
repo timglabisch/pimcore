@@ -21,9 +21,16 @@ pimcore.user = Class.create({
     },
 
     isAllowed: function (type) {
-       
-        if (this.permissionInfo[type]) {
-            return this.permissionInfo[type].granted;
+
+        // @TODO: Should be removed when refacturing is finished
+        if(this.admin) {
+            return true;
+        }
+
+        if (typeof this.permissions == "object") {
+            if(in_array(type,this.permissions)) {
+                return true;
+            }
         }
         return false;
     }

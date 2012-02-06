@@ -124,7 +124,16 @@ class Pimcore_Controller_Router_Route_Frontend extends Zend_Controller_Router_Ro
                 if ($document instanceof Document) {
                     if (in_array($document->getType(), array("page","snippet","email"))) {
 
-                        if (!empty($params["pimcore_version"]) || !empty($params["pimcore_preview"]) || !empty($params["pimcore_admin"]) || !empty($params["pimcore_editmode"]) || $document->isPublished() || !empty($_COOKIE["pimcore_admin_sid"])) {
+                        if (!empty($params["pimcore_version"]) || !empty($params["pimcore_preview"]) || !empty($params["pimcore_admin"]) || !empty($params["pimcore_editmode"]) || $document->isPublished() ) {
+
+                            // check for a pretty url, and if the document is called by that, otherwise redirect to pretty url
+                            if($document instanceof Document_Page && $document->getPrettyUrl() && empty($params["pimcore_preview"]) && empty($params["pimcore_editmode"])) {
+                                if(rtrim($document->getPrettyUrl()) != rtrim($path,"/")) {
+                                    header("Location: " . $document->getPrettyUrl(), true, 301);
+                                    exit;
+                                }
+                            }
+
                             $params["document"] = $document;
                             if ($controller = $document->getController()) {
                                 $params["controller"] = $controller;
@@ -240,9 +249,12 @@ class Pimcore_Controller_Router_Route_Frontend extends Zend_Controller_Router_Ro
                             $params["module"] = $module;
                         }
 
-
                         // try to get nearest document to the route
-                        $params["document"] = $this->getNearestDocumentByPath($path);
+                        $document = $this->getNearestDocumentByPath($path);
+                        if($document instanceof Document_Hardlink) {
+                            $document = Document_Hardlink_Service::wrap($document);
+                        }
+                        $params["document"] = $document;
 
                         $matchFound = true;
                         Staticroute::setCurrentRoute($route);
@@ -260,19 +272,6 @@ class Pimcore_Controller_Router_Route_Frontend extends Zend_Controller_Router_Ro
         if (!$matchFound) {
             $this->checkForRedirect(false);
         }
-
-        if (!$matchFound && $site instanceof Site) {
-            if ($config->general->domain) {
-                header("Location: http://" . $_SERVER["HTTP_HOST"], true, 301);
-            }
-            else {
-                $errorMessage = "You have to specify a main domain in system-settings (Settings -> System -> Website -> Domain) if you want to use sites!";
-                Logger::emerg($errorMessage);
-                die($errorMessage);
-            }
-            exit;
-        }
-
 
         if (!$matchFound) {
             return false;
@@ -373,7 +372,11 @@ class Pimcore_Controller_Router_Route_Frontend extends Zend_Controller_Router_Ro
                                 throw new Exception("Target of redirect no found!");
                             }
                         }
+
+                        // replace escaped % signs so that they didn't have effects to vsprintf (PIMCORE-1215)
+                        $target = str_replace("\\%","###URLENCODE_PLACEHOLDER###", $target);
                         $url = vsprintf($target, $matches);
+                        $url = str_replace("###URLENCODE_PLACEHOLDER###", "%", $url);
 
                         header($redirect->getHttpStatus());
                         header("Location: " . $url);

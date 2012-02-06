@@ -10,7 +10,7 @@
  * http://www.pimcore.org/license
  *
  * @category   Pimcore
- * @package    Document
+ * @package    Asset
  * @copyright  Copyright (c) 2009-2010 elements.at New Media Solutions GmbH (http://www.elements.at)
  * @license    http://www.pimcore.org/license     New BSD License
  */
@@ -133,7 +133,7 @@ class Asset_Service extends Element_Service {
             $target->setData($source->getData());
             $target->setCustomSettings($source->getCustomSettings());
         }
-        $target->setPermissions($source->getPermissions());
+
         $target->setProperties($source->getProperties());
         $target->save();
 

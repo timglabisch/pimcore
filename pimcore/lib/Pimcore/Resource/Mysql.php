@@ -16,6 +16,21 @@
 class Pimcore_Resource_Mysql {
 
     /**
+     * @var string
+     */
+    protected static $_sqlLogFilename;
+
+    /**
+     * @var bool
+     */
+    protected static $_logProfilerWasEnabled;
+
+    /**
+     * @var bool
+     */
+    protected static $_logCaptureActive = false;
+
+    /**
      * @static
      * @return string
      */
@@ -45,7 +60,8 @@ class Pimcore_Resource_Mysql {
             Logger::warn($e);
         }
 
-        if(PIMCORE_DEVMODE) {
+        // enable the db-profiler if the devmode is on and there is no custom profiler set (eg. in system.xml)
+        if(PIMCORE_DEVMODE && !$db->getProfiler()->getEnabled()) {
             $profiler = new Pimcore_Db_Profiler('All DB Queries');
             $profiler->setEnabled(true);
             $db->setProfiler($profiler);
@@ -134,6 +150,78 @@ class Pimcore_Resource_Mysql {
         } catch (Exception $e) {
             Logger::error($e);
         }
+    }
+
+    /**
+     * @static
+     * @param string $method
+     * @param array $args
+     */
+    public static function startCapturingDefinitionModifications ($method, $args) {
+        if($method == "query") {
+            if(preg_match("/(ALTER|CREATE|DROP|RENAME|TRUNCATE)(.*)(DATABASE|EVENT|FUNCTION|PROCEDURE|TABLE|TABLESPACE|VIEW|INDEX|TRIGGER)/i",$args[0])) {
+                self::logDefinitionModification($args[0]);
+            }
+        } else {
+            $tablesToCheck = array("classes","users_permission_definitions");
+
+            if(in_array($args[0], $tablesToCheck)) {
+                self::$_logProfilerWasEnabled = self::get()->getProfiler()->getEnabled();
+                self::get()->getProfiler()->setEnabled(true);
+                self::$_logCaptureActive = true;
+            }
+        }
+    }
+
+    /**
+     * @static
+     *
+     */
+    public static function stopCapturingDefinitionModifications () {
+
+        if(self::$_logCaptureActive) {
+            $search = array();
+            $replace = array();
+            $query = self::get()->getProfiler()->getLastQueryProfile()->getQuery();
+            $params = self::get()->getProfiler()->getLastQueryProfile()->getQueryParams();
+
+            // @TODO named parameters
+            if(!empty($params)) {
+                for ($i=0; $i<count($params); $i++) {
+                    $search[] = "?";
+                    $replace[] = self::get()->quote($params[$i]);
+                }
+                $query = str_replace($search, $replace, $query);
+            }
+
+            self::logDefinitionModification($query);
+            self::get()->getProfiler()->setEnabled(self::$_logProfilerWasEnabled);
+        }
+
+        self::$_logCaptureActive = false;
+    }
+
+    /**
+     * @static
+     * @param string $sql
+     */
+    public static function logDefinitionModification ($sql) {
+
+        if(!self::$_sqlLogFilename) {
+            self::$_sqlLogFilename = "db-change-log_". time() ."-" . uniqid() . ".sql";
+        }
+
+        // write sql change log for deploying to production system
+        $sql .= "\n\n\n";
+
+        $file = PIMCORE_SYSTEM_TEMP_DIRECTORY."/". self::$_sqlLogFilename;
+        if(defined("PIMCORE_DB_CHANGELOG_DIRECTORY")) {
+            $file = PIMCORE_DB_CHANGELOG_DIRECTORY."/" . self::$_sqlLogFilename;
+        }
+
+        $handle = fopen($file,"a");
+        fwrite($handle, $sql);
+        fclose($handle);
     }
 
 

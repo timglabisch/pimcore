@@ -192,11 +192,16 @@ class Document_Tag_Video extends Document_Tag
 
     public function getAssetCode()
     {
-
         $asset = Asset::getById($this->id);
 
+        // compatibility mode when FFMPEG is not present
+        if(!Pimcore_Video::isAvailable()) {
+            // try to load the assigned asset into the flowplayer
+            return $this->getFlowplayerCode(array("f4v" => (string) $asset, "mp4" => (string) $asset));
+        }
+
         $options = $this->getOptions();
-        if ($asset && $options["thumbnail"]) {
+        if ($asset instanceof Asset_Video && $options["thumbnail"]) {
             $thumbnail = $asset->getThumbnail($options["thumbnail"]);
             if ($thumbnail) {
                 $image = $asset->getImageThumbnail(array(
@@ -213,16 +218,29 @@ class Document_Tag_Video extends Document_Tag
 
                     $progress = Asset_Video_Thumbnail_Processor::getProgress($thumbnail["processId"]);
                     return $this->getProgressCode($progress, $image);
+                } else {
+                    return $this->getErrorCode();
                 }
+            } else {
+                return $this->getErrorCode();
             }
+        } else {
+            return $this->getErrorCode();
         }
-
-        return $this->getFlowplayerCode((string) $asset);
     }
 
     public function getUrlCode()
     {
         return $this->getFlowplayerCode($this->id);
+    }
+
+    public function getErrorCode() {
+        $code = '
+        <div id="pimcore_video_' . $this->getName() . '">
+            <div class="pimcore_tag_video_error" style="width: ' . ($this->getWidth()-1) . 'px; height: ' . ($this->getHeight()-1) . 'px; border:1px solid #000; background: url(/pimcore/static/img/filetype-not-supported.png) no-repeat center center #fff;"></div>
+        </div>';
+
+        return $code;
     }
 
     public function getYoutubeCode()

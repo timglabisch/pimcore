@@ -28,7 +28,7 @@ pimcore.object.tree = Class.create({
                 treeId: "pimcore_panel_tree_objects",
                 treeIconCls: "pimcore_icon_object",
                 treeTitle: t('objects'),
-                parentPanel: Ext.getCmp("pimcore_panel_tree"),
+                parentPanel: Ext.getCmp("pimcore_panel_tree_left"),
                 index: 3
             };
         }
@@ -45,15 +45,15 @@ pimcore.object.tree = Class.create({
                 id: this.config.rootId
             },
             success: function (response) {
-                pimcore.layout.treepanelmanager.initPanel(this.config.treeId, this.init.bind(this, response));
+                var res = Ext.decode(response.responseText);
+                if(res["id"]) {
+                    pimcore.layout.treepanelmanager.initPanel(this.config.treeId, this.init.bind(this, res));
+                }
             }.bind(this)
         });
     },
 
-    init: function(rootNodeRaw) {
-        
-        // get root-node config & define special values
-        var rootNodeConfig = Ext.decode(rootNodeRaw.responseText);
+    init: function(rootNodeConfig) {
 
         rootNodeConfig.nodeType = "async";
         rootNodeConfig.text = "home";
@@ -75,6 +75,14 @@ pimcore.object.tree = Class.create({
             containerScroll: true,
             rootVisible: this.config.rootVisible,
             border: false,
+            tools: [{
+                id: "right",
+                handler: pimcore.layout.treepanelmanager.toRight.bind(this)
+            },{
+                id: "left",
+                handler: pimcore.layout.treepanelmanager.toLeft.bind(this),
+                hidden: true
+            }],
             root: rootNodeConfig,
             plugins: new Ext.ux.tree.TreeNodeMouseoverPlugin(),
             loader: new Ext.ux.tree.PagingTreeLoader({
@@ -127,7 +135,9 @@ pimcore.object.tree = Class.create({
     },
 
     onTreeNodeClick: function () {
-        pimcore.helpers.openObject(this.id, this.attributes.type);
+        if(this.attributes.permissions.view) {
+            pimcore.helpers.openObject(this.id, this.attributes.type);
+        }
     },
 
     onTreeNodeOver: function (event) {
@@ -668,113 +678,8 @@ pimcore.object.tree = Class.create({
     },
 
     remove : function () {
-
-        // check for dependencies
-        Ext.Ajax.request({
-            url: "/admin/object/delete-info/",
-            params: {id: this.id},
-            success: this.attributes.reference.deleteCheckDependencyComplete.bind(this)
-        });
+        pimcore.helpers.deleteObject(this.id);
     },
-
-    deleteCheckDependencyComplete: function (response) {
-
-        try {
-            var res = Ext.decode(response.responseText);
-            var rm = this.attributes.reference.deleteObjectFromServer.bind(this,res);
-            var message = t('delete_message');
-            if (res.hasDependencies) {
-                var message = t('delete_message_dependencies');
-            }
-            Ext.MessageBox.show({
-                    title:t('delete'),
-                    msg: message,
-                    buttons: Ext.Msg.OKCANCEL ,
-                    icon: Ext.MessageBox.INFO ,
-                    fn: function(buttonId){
-                        if(buttonId == "ok"){
-                            rm();
-                        }
-                    }
-                });
-        }
-        catch (e) {
-        }
-    },
-
-    deleteObjectFromServer: function (r) {
-
-        if (r.deletejobs) {
-            
-            pimcore.helpers.addTreeNodeLoadingIndicator("object", this.id);
-            this.getUI().addClass("pimcore_delete");
-            /*this.originalClass = Ext.get(this.getUI().getIconEl()).getAttribute("class");
-             Ext.get(this.getUI().getIconEl()).dom.setAttribute("class", "x-tree-node-icon pimcore_icon_loading");*/
-
-
-            if (pimcore.globalmanager.exists("object_" + this.id)) {
-                var tabPanel = Ext.getCmp("pimcore_panel_tabs");
-                tabPanel.remove("object_" + this.id);
-            }
-
-            if(r.deletejobs.length > 2) {
-                this.deleteProgressBar = new Ext.ProgressBar({
-                    text: t('initializing')
-                });
-
-                this.deleteWindow = new Ext.Window({
-                    title: t("delete"),
-                    layout:'fit',
-                    width:500,
-                    bodyStyle: "padding: 10px;",
-                    closable:false,
-                    plain: true,
-                    modal: true,
-                    items: [this.deleteProgressBar]
-                });
-
-                this.deleteWindow.show();
-            }
-
-
-            var pj = new pimcore.tool.paralleljobs({
-                success: function () {
-
-                    try {
-                        this.getUI().removeClass("pimcore_delete");
-                        //Ext.get(this.getUI().getIconEl()).dom.setAttribute("class", this.originalClass);
-                        pimcore.helpers.removeTreeNodeLoadingIndicator("object", this.id);
-                        this.remove();
-                    } catch(e) {
-                        console.log(e);
-                        pimcore.helpers.showNotification(t("error"), t("error_deleting_object"), "error");
-                        this.parentNode.reload();
-                    }
-
-                    if(this.deleteWindow) {
-                        this.deleteWindow.close();
-                    }
-                    
-                    this.deleteProgressBar = null;
-                    this.deleteWindow = null;
-                }.bind(this),
-                update: function (currentStep, steps, percent) {
-                    if(this.deleteProgressBar) {
-                        var status = currentStep / steps;
-                        this.deleteProgressBar.updateProgress(status, percent + "%");
-                    }
-                }.bind(this),
-                failure: function (message) {
-                    this.deleteWindow.close();
-
-                    pimcore.helpers.showNotification(t("error"), t("error_deleting_object"), "error", t(message));
-                    this.parentNode.reload();
-                }.bind(this),
-                jobs: r.deletejobs
-            });
-        }
-    },
-
 
     editKey: function () {
         Ext.MessageBox.prompt(t('rename'), t('please_enter_the_new_name'), this.attributes.reference.editKeyComplete.bind(this), null, null, this.text);

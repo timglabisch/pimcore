@@ -123,14 +123,6 @@ class Document extends Pimcore_Model_Abstract implements Document_Interface {
     public $userModification;
 
     /**
-     * Permissions set to this document (user-independend)
-     * Contains a list of Document_Permissions
-     *
-     * @var array
-     */
-    public $permissions = null;
-
-    /**
      * Permissions for the user which requested this document in editmode
      *
      * @var Document_Permissions
@@ -403,20 +395,6 @@ class Document extends Pimcore_Model_Abstract implements Document_Interface {
             }
         }
 
-        // save permissions
-        $this->getPermissions();
-        // remove all permissions
-        $this->getResource()->deleteAllPermissions();
-
-        if (is_array($this->permissions)) {
-            foreach ($this->permissions as $permission) {
-                $permission->setId(null);
-                $permission->setCid($this->getId());
-                $permission->setCpath($this->getFullPath());
-                $permission->save();
-            }
-        }
-
         // save dependencies
         $d = $this->getDependencies();
         $d->clean();
@@ -435,7 +413,15 @@ class Document extends Pimcore_Model_Abstract implements Document_Interface {
         $this->getResource()->update();
 
         if ($this->_oldPath) {
+            // update childs path
             $this->getResource()->updateChildsPaths($this->_oldPath);
+
+            // create redirect for old path
+            $redirect = new Redirect();
+            $redirect->setTarget($this->getId());
+            $redirect->setSource("@" . $this->_oldPath . "/?@");
+            $redirect->setStatusCode(301);
+            $redirect->save();
         }
 
         // empty object cache
@@ -653,29 +639,6 @@ class Document extends Pimcore_Model_Abstract implements Document_Interface {
     }
 
     /**
-     * Get a list of permissions set to the document (not user-specific)
-     * If they aren't already set try to get them from resource
-     *
-     * @return array
-     */
-    public function getPermissions() {
-        if ($this->permissions === null) {
-            $this->setPermissions($this->getResource()->getPermissions());
-        }
-        return $this->permissions;
-    }
-
-    /**
-     * Set a list of Permissions
-     *
-     * @param array $permissions
-     * @return void
-     */
-    public function setPermissions($permissions) {
-        $this->permissions = $permissions;
-    }
-
-    /**
      * Returns the full path of the document including the key (path+key)
      *
      * @return string
@@ -725,20 +688,23 @@ class Document extends Pimcore_Model_Abstract implements Document_Interface {
      */
     public function getPath() {
 
-        // check for site
-        try {
+        if(!Pimcore::inAdmin()) {
+            // check for site
+            try {
 
-            $site = Zend_Registry::get("pimcore_site");
-            if ($site instanceof Site) {
-                if ($site->getRootDocument() instanceof Document_Page && $site->getRootDocument() !== $this) {
-                    $rootPath = $site->getRootPath();
-                    $rootPath = addcslashes($rootPath, "/");
+                $site = Zend_Registry::get("pimcore_site");
+                if ($site instanceof Site) {
+                    if ($site->getRootDocument() instanceof Document_Page && $site->getRootDocument() !== $this) {
+                        $rootPath = $site->getRootPath();
+                        $rootPath = addcslashes($rootPath, "/");
 
-                    return preg_replace("/^" . $rootPath . "/", "", $this->path);
+                        return preg_replace("/^" . $rootPath . "/", "", $this->path);
+                    }
                 }
             }
-        }
-        catch (Exception $e) {
+            catch (Exception $e) {
+
+            }
         }
 
         return $this->path;
@@ -904,31 +870,6 @@ class Document extends Pimcore_Model_Abstract implements Document_Interface {
     }
 
     /**
-     * @param Document_Permissions $permissions
-     * @return void
-     */
-    public function setUserPermissions(Document_Permissions $permissions = null) {
-        $this->userPermissions = $permissions;
-    }
-
-    /**
-     * @return Document_Permissions
-     */
-    public function getUserPermissions(User $user = null) {
-        
-        // get global user if no user is specified and permissions are undefined
-        if(!$user && !$this->userPermissions) {
-            $user = Zend_Registry::get("pimcore_admin_user");
-        }
-        
-        if ($user) {
-            $this->userPermissions = $this->getPermissionsForUser($user);
-        }
-        return $this->userPermissions;
-    }
-
-
-    /**
      * Get a list of properties (including the inherited)
      *
      * @return Property[]
@@ -1036,33 +977,31 @@ class Document extends Pimcore_Model_Abstract implements Document_Interface {
      */
     public function isAllowed($type) {
 
-        if (!$this->getUserPermissions() instanceof Document_Permissions) {
-            return false;
-        }
-
-        $currentUser = $this->getUserPermissions()->getUser();
-
+        $currentUser = Pimcore_Tool_Admin::getCurrentUser();
         //everything is allowed for admin
         if ($currentUser->isAdmin()) {
             return true;
         }
 
-        //check general permission on documents
-        if (!$currentUser->isAllowed("documents")) {
-            return false;
-        }
+        return $this->getResource()->isAllowed($type, $currentUser);
+    }
 
+    /**
+     * @return array
+     */
+    public function getUserPermissions () {
 
-        if ($this->getUserPermissions() instanceof Document_Permissions) {
+        $vars = get_class_vars("User_Workspace_Document");
+        $ignored = array("userId","cid","cpath","resource");
+        $permissions = array();
 
-            $method = "get" . $type;
-            if (method_exists($this->getUserPermissions(), $method)) {
-                return $this->getUserPermissions()->$method();
+        foreach ($vars as $name => $defaultValue) {
+            if(!in_array($name, $ignored)) {
+                $permissions[$name] = $this->isAllowed($name);
             }
-
         }
 
-        return false;
+        return $permissions;
     }
 
     /**
@@ -1083,12 +1022,12 @@ class Document extends Pimcore_Model_Abstract implements Document_Interface {
         
         if(isset($this->_fulldump)) {
             // this is if we want to make a full dump of the object (eg. for a new version), including childs for recyclebin
-            $blockedVars = array("dependencies", "userPermissions", "permissions", "hasChilds", "_oldPath", "versions", "scheduledTasks", "parent");
+            $blockedVars = array("dependencies", "userPermissions", "hasChilds", "_oldPath", "versions", "scheduledTasks", "parent");
             $finalVars[] = "_fulldump";
             $this->removeInheritedProperties();
         } else {
             // this is if we want to cache the object
-            $blockedVars = array("dependencies", "userPermissions", "permissions", "childs", "hasChilds", "_oldPath", "versions", "scheduledTasks", "properties", "parent");
+            $blockedVars = array("dependencies", "userPermissions", "childs", "hasChilds", "_oldPath", "versions", "scheduledTasks", "properties", "parent");
         }
         
 
