@@ -187,7 +187,7 @@ pimcore.layout.toolbar = Class.create({
 
             extrasItems.push({
                 text: t("system_infos_and_tools"),
-                itemId: t("system_infos_and_tools"),
+                itemId: "system_infos_and_tools",
                 iconCls: "pimcore_icon_info",
                 hideOnClick: false,
                 menu: [{
