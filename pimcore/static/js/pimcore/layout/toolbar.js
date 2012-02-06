@@ -72,6 +72,7 @@ pimcore.layout.toolbar = Class.create({
         if (user.isAllowed("translations")) {
             extrasItems.push({
                 text: t("translations"),
+                itemid: "translations",
                 iconCls: "pimcore_icon_translations",
                 handler: this.editTranslations
             });
@@ -80,6 +81,7 @@ pimcore.layout.toolbar = Class.create({
         if (user.isAllowed("system_settings")) {
             extrasItems.push({
                 text: t("recyclebin"),
+                itemid: "recyclebin",
                 iconCls: "pimcore_icon_recyclebin",
                 handler: this.recyclebin
             });
@@ -88,14 +90,17 @@ pimcore.layout.toolbar = Class.create({
         if (user.isAllowed("documents")) {
             extrasItems.push({
                 text: t("search_engine_optimization"),
+                itemId: "search_engine_optimization",
                 iconCls: "pimcore_icon_seo",
                 hideOnClick: false,
                 menu: [{
                     text: t("document_seo_analysis_overview"),
+                    itemId: 'document_seo_analysis_overview',
                     iconCls: "pimcore_icon_seo_document",
                     handler: this.showDocumentSeo
                 }, {
                     text: "robots.txt",
+                    itemId: "robots.txt",
                     iconCls: "pimcore_icon_robots",
                     handler: this.showRobotsTxt
                 }]
@@ -128,9 +133,9 @@ pimcore.layout.toolbar = Class.create({
 
         if (user.isAllowed("reports")) {
             extrasItems.push({
-                text: t("recyclebin"),
-                itemId: "recyclebin",
-                handler: this.showReports
+                text: t("reports_and_marketing") + " (beta)",
+                itemId: "pimcore_icon_reports",
+                handler: this.showReports,
                 iconCls: "pimcore_icon_recyclebin",
                 handler: this.recyclebin
             });
@@ -182,8 +187,7 @@ pimcore.layout.toolbar = Class.create({
 
             extrasItems.push({
                 text: t("system_infos_and_tools"),
-                itemId: "reports_and_marketing",
-                itemId: t("system_infos"),
+                itemId: t("system_infos_and_tools"),
                 iconCls: "pimcore_icon_info",
                 hideOnClick: false,
                 menu: [{
@@ -197,11 +201,13 @@ pimcore.layout.toolbar = Class.create({
                     iconCls: "pimcore_icon_server_info",
                     handler: this.showServerInfo
                 },{
-                    text: "Database Administration",
+                    text: t("database_administration"),
+                    itemId: "database_administration",
                     iconCls: "pimcore_icon_mysql",
                     handler: this.showAdminer
                 },{
                     text: t("server_fileexplorer"),
+                    itemId: "server_fileexplorer",
                     iconCls: "pimcore_icon_fileexplorer",
                     handler: this.showFilexplorer
                 }]
@@ -261,10 +267,12 @@ pimcore.layout.toolbar = Class.create({
                 hideOnClick: false,
                 menu: [{
                     text: t("users"),
+                    itemId: 'users',
                     handler: this.editUsers,
                     iconCls: "pimcore_icon_users"
                 }, {
                     text: t("roles"),
+                    itemId: 'roles',
                     handler: this.editRoles,
                     iconCls: "pimcore_icon_roles"
                 }]
@@ -281,15 +289,17 @@ pimcore.layout.toolbar = Class.create({
         if (user.isAllowed("thumbnails")) {
             settingsItems.push({
                 text: t("thumbnails"),
+                itemId: "thumbnails",
                 iconCls: "pimcore_icon_thumbnails",
-                itemId: "pimcore_icon_thumbnails",
                 hideOnClick: false,
                 menu : [{
                     text: t("image_thumbnails"),
+                    itemId: "image_thumbnails",
                     iconCls: "pimcore_icon_thumbnails",
                     handler: this.editThumbnails
                 },{
                     text: t("video_thumbnails"),
+                    itemId: "video_thumbnails",
                     iconCls: "pimcore_icon_videothumbnails",
                     handler: this.editVideoThumbnails
                 }]
@@ -392,6 +402,7 @@ pimcore.layout.toolbar = Class.create({
         if(user.admin) {
             settingsItems.push({
                 text: t("translations_admin"),
+                itemId: "translations_admin",
                 iconCls: "pimcore_icon_translations",
                 handler: this.editTranslationsSpecific
             });
