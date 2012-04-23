@@ -71,7 +71,7 @@ pimcore.document.tags.areablock = Class.create(pimcore.document.tag, {
                 plusButton = new Ext.Button({
                     cls: "pimcore_block_button_plus",
                     iconCls: "pimcore_icon_plus",
-                    menu: [this.getTypeMenu(this, this.elements[i])],
+                    menu: [this.getTypeMenu(this, this.elements[i], this.options.group)],
                     listeners: {
                         "menushow": function () {
                             Ext.get(this).addClass("pimcore_tag_areablock_force_show_buttons");
@@ -280,18 +280,79 @@ pimcore.document.tags.areablock = Class.create(pimcore.document.tag, {
         plusButton = new Ext.Button({
             cls: "pimcore_block_button_plus",
             iconCls: "pimcore_icon_plus",
-            menu: [this.getTypeMenu(this, null)]
+            menu: [this.getTypeMenu(this, null, this.options.group)]
         });
         plusButton.render(plusEl);
     },
     
-    getTypeMenu: function (scope, element) {
+    getTypeMenu: function (scope, element, currentGroup) {
         var menu = [];
-        var groupMenu;
 
-        if(typeof this.options.group != "undefined") {
-            var groups = Object.keys(this.options.group);
+        console.log(currentGroup);
+
+        if(typeof currentGroup != "undefined") {
+            var groups = Object.keys(currentGroup);
             for (var g=0; g<groups.length; g++) {
+
+                if(typeof(currentGroup[groups[g]]) == "function") {
+                    continue;
+                } else
+
+
+                if(typeof(currentGroup[groups[g]]) == "string") {
+
+                    var groupKey = groups[g];
+                    var groupValue = currentGroup[groupKey];
+
+                    var groupMenu = {
+                        text: groupKey,
+                        iconCls: "pimcore_icon_area",
+                        hideOnClick: false
+                    };
+
+                    menu.push(groupMenu);
+                } else
+
+
+                if(typeof(currentGroup[groups[g]]) == "object") {
+
+                    var groupKey = groups[g];
+                    var groupValue = currentGroup[groupKey];
+
+                    if(typeof(groupValue.length) == "undefined") {
+
+                        var groupMenu = {
+                            text: groupKey,
+                            iconCls: "pimcore_icon_area",
+                            hideOnClick: false,
+                            menu: this.getTypeMenu(scope, element, currentGroup[groupKey])
+                        };
+
+                        menu.push(groupMenu);
+
+                    } else {
+
+                        var submenu = [];
+
+                        for(gi=0; gi < groupValue.length; gi++) {
+                            submenu.push(this.getTypeMenu(scope, element, groupValue[gi]));
+                        }
+
+                        menu.push({
+                            text: groupKey,
+                            iconCls: "pimcore_icon_area",
+                            hideOnClick: false,
+                            menu: submenu
+                        });
+
+                    }
+
+                }
+
+                continue;
+
+
+
                 if(groups[g].length > 0) {
                     groupMenu = {
                         text: groups[g],

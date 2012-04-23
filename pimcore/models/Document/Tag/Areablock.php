@@ -454,7 +454,7 @@ class Document_Tag_Areablock extends Document_Tag {
 
         $options["types"] = $availableAreas;
 
-        if(is_array($options["group"])) {
+      /*  if(is_array($options["group"])) {
             $groupingareas = array();
             foreach ($availableAreas as $area) {
                 $groupingareas[$area["type"]] = $area["type"];
@@ -488,6 +488,11 @@ class Document_Tag_Areablock extends Document_Tag {
 
             $options["group"] = $groups;
         }
+
+
+        TODO dont forget the translation!
+      */
+
         
         if (empty($options["limit"])) {
             $options["limit"] = 1000000;
