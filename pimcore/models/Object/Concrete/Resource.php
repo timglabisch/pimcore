@@ -38,6 +38,15 @@ class Object_Concrete_Resource extends Object_Abstract_Resource {
     }
 
     /**
+     * Get the TableName Suffix
+     *
+     * @return void
+     */
+    public function getTableNameSuffix() {
+        return (isset($this->model->o_table) && $this->model->o_table?$this->model->o_table:$this->model->getId());
+    }
+
+    /**
      * Get the data for the object from database for the given id
      *
      * @param integer $id
@@ -69,7 +78,7 @@ class Object_Concrete_Resource extends Object_Abstract_Resource {
      */
     public function getRelationIds($fieldName) {
         $relations = array();
-        $allRelations = $this->db->fetchAll("SELECT * FROM object_relations_" . $this->model->getO_classId() . " WHERE fieldname = ? AND src_id = ? AND ownertype = 'object' ORDER BY `index` ASC", array($fieldName, $this->model->getO_id()));
+        $allRelations = $this->db->fetchAll("SELECT * FROM object_relations_" . $this->getTableNameSuffix() . " WHERE fieldname = ? AND src_id = ? AND ownertype = 'object' ORDER BY `index` ASC", array($fieldName, $this->model->getO_id()));
         foreach ($allRelations as $relation) {
             $relations[] = $relation["dest_id"];
         }
@@ -100,7 +109,7 @@ class Object_Concrete_Resource extends Object_Abstract_Resource {
         }
 
         $relations = $this->db->fetchAll("SELECT r." . $dest . " as dest_id, r." . $dest . " as id, r.type, o.o_className as subtype, concat(o.o_path ,o.o_key) as path , r.index
-            FROM objects o, object_relations_" . $classId . " r
+            FROM objects o, object_relations_" . $this->getTableNameSuffix() . " r
             WHERE r.fieldname= ?
             AND r.ownertype = 'object'
             AND r." . $src . " = ?
@@ -108,7 +117,7 @@ class Object_Concrete_Resource extends Object_Abstract_Resource {
             AND r.type='object'
 
             UNION SELECT r." . $dest . " as dest_id, r." . $dest . " as id, r.type,  a.type as subtype,  concat(a.path,a.filename) as path, r.index
-            FROM assets a, object_relations_" . $classId . " r
+            FROM assets a, object_relations_" . $this->getTableNameSuffix() . " r
             WHERE r.fieldname= ?
             AND r.ownertype = 'object'
             AND r." . $src . " = ?
@@ -116,7 +125,7 @@ class Object_Concrete_Resource extends Object_Abstract_Resource {
             AND r.type='asset'
 
             UNION SELECT r." . $dest . " as dest_id, r." . $dest . " as id, r.type, d.type as subtype, concat(d.path,d.key) as path, r.index
-            FROM documents d, object_relations_" . $classId . " r
+            FROM documents d, object_relations_" . $this->getTableNameSuffix() . " r
             WHERE r.fieldname= ?
             AND r.ownertype = 'object'
             AND r." . $src . " = ?
@@ -138,7 +147,7 @@ class Object_Concrete_Resource extends Object_Abstract_Resource {
      */
     public function getData() {
 
-        $data = $this->db->fetchRow('SELECT * FROM object_store_' . $this->model->getO_classId() . ' WHERE oo_id = ?', $this->model->getO_id());
+        $data = $this->db->fetchRow('SELECT * FROM object_store_' . $this->getTableNameSuffix() . ' WHERE oo_id = ?', $this->model->getO_id());
 
         foreach ($this->model->geto_class()->getFieldDefinitions() as $key => $value) {
             if (method_exists($value, "load")) {
@@ -207,11 +216,11 @@ class Object_Concrete_Resource extends Object_Abstract_Resource {
         if($this->model->getId()) {
             try {
                 $this->insertOrUpdate = $this->db->fetchRow("SELECT
-                  object_store_" . $this->model->getO_classId() . ".oo_id as store, object_query_" . $this->model->getO_classId() . ".oo_id as query, object.o_id as object
+                  object_store_" . $this->getTableNameSuffix() . ".oo_id as store, object_query_" . $this->getTableNameSuffix() . ".oo_id as query, object.o_id as object
                 FROM
                   (SELECT o_id FROM objects WHERE o_id = " . $this->model->getId() . ") as object LEFT JOIN
-                  object_store_" . $this->model->getO_classId() . " ON object.o_id = object_store_" . $this->model->getO_classId() . ".oo_id LEFT JOIN
-                  object_query_" . $this->model->getO_classId() . " ON object.o_id = object_query_" . $this->model->getO_classId() . ".oo_id;");
+                  object_store_" . $this->getTableNameSuffix() . " ON object.o_id = object_store_" . $this->getTableNameSuffix() . ".oo_id LEFT JOIN
+                  object_query_" . $this->getTableNameSuffix() . " ON object.o_id = object_query_" . $this->getTableNameSuffix() . ".oo_id;");
             } catch (Exception $e) {
                 $this->insertOrUpdate = null;
             }
@@ -241,9 +250,9 @@ class Object_Concrete_Resource extends Object_Abstract_Resource {
         // empty relation table except the untouchable fields (eg. lazy loading fields)
         if (count($untouchable) > 0) {
             $untouchables = "'" . implode("','", $untouchable) . "'";
-            $this->db->delete("object_relations_" . $this->model->getO_classId(), $this->db->quoteInto("src_id = ? AND fieldname not in (" . $untouchables . ") AND ownertype = 'object'", $this->model->getO_id()));
+            $this->db->delete("object_relations_" . $this->getTableNameSuffix(), $this->db->quoteInto("src_id = ? AND fieldname not in (" . $untouchables . ") AND ownertype = 'object'", $this->model->getO_id()));
         } else {
-            $this->db->delete("object_relations_" . $this->model->getO_classId(), $this->db->quoteInto("src_id = ? AND ownertype = 'object'",  $this->model->getO_id()));
+            $this->db->delete("object_relations_" . $this->getTableNameSuffix(), $this->db->quoteInto("src_id = ? AND ownertype = 'object'",  $this->model->getO_id()));
         }
 
         
@@ -274,9 +283,9 @@ class Object_Concrete_Resource extends Object_Abstract_Resource {
         }
 
         if($this->insertOrUpdate["store"]) {
-            $this->db->update("object_store_" . $this->model->getO_classId(), $data, $this->db->quoteInto("oo_id = ?", $this->model->getO_id()));
+            $this->db->update("object_store_" . $this->getTableNameSuffix(), $data, $this->db->quoteInto("oo_id = ?", $this->model->getO_id()));
         } else {
-            $this->db->insert("object_store_" . $this->model->getO_classId(), $data);
+            $this->db->insert("object_store_" . $this->getTableNameSuffix(), $data);
         }
 
 
@@ -288,7 +297,7 @@ class Object_Concrete_Resource extends Object_Abstract_Resource {
 
         $data = array();
         $this->inheritanceHelper->resetFieldsToCheck();
-        $oldData = $this->db->fetchRow("SELECT * FROM object_query_" . $this->model->getO_classId() . " WHERE oo_id = ?", $this->model->getId());
+        $oldData = $this->db->fetchRow("SELECT * FROM object_query_" . $this->getTableNameSuffix() . " WHERE oo_id = ?", $this->model->getId());
 
         foreach ($object as $key => $value) {
             $fd = $this->model->geto_class()->getFieldDefinition($key);
@@ -349,9 +358,9 @@ class Object_Concrete_Resource extends Object_Abstract_Resource {
         $data["oo_id"] = $this->model->getO_id();
 
         if($this->insertOrUpdate["query"]) {
-            $this->db->update("object_query_" . $this->model->getO_classId(), $data, $this->db->quoteInto("oo_id = ?", $this->model->getO_id()));
+            $this->db->update("object_query_" . $this->getTableNameSuffix(), $data, $this->db->quoteInto("oo_id = ?", $this->model->getO_id()));
         } else {
-            $this->db->insert("object_query_" . $this->model->getO_classId(), $data);
+            $this->db->insert("object_query_" . $this->getTableNameSuffix(), $data);
         }
 
         Object_Abstract::setGetInheritedValues($inheritedValues);
@@ -372,10 +381,10 @@ class Object_Concrete_Resource extends Object_Abstract_Resource {
      * @return void
      */
     public function delete() {
-        $this->db->delete("object_query_" . $this->model->getO_classId(), $this->db->quoteInto("oo_id = ?", $this->model->getO_id()));
-        $this->db->delete("object_store_" . $this->model->getO_classId(), $this->db->quoteInto("oo_id = ?", $this->model->getO_id()));
-        $this->db->delete("object_relations_" . $this->model->getO_classId(), $this->db->quoteInto("src_id = ?", $this->model->getO_id()));
-        $this->db->delete("object_relations_" . $this->model->getO_classId(), $this->db->quoteInto("dest_id = ?", $this->model->getO_id()));
+        $this->db->delete("object_query_" . $this->getTableNameSuffix(), $this->db->quoteInto("oo_id = ?", $this->model->getO_id()));
+        $this->db->delete("object_store_" . $this->getTableNameSuffix(), $this->db->quoteInto("oo_id = ?", $this->model->getO_id()));
+        $this->db->delete("object_relations_" . $this->getTableNameSuffix(), $this->db->quoteInto("src_id = ?", $this->model->getO_id()));
+        $this->db->delete("object_relations_" . $this->getTableNameSuffix(), $this->db->quoteInto("dest_id = ?", $this->model->getO_id()));
 
         // delete fields wich have their own delete algorithm
         foreach ($this->model->geto_class()->getFieldDefinitions() as $fd) {

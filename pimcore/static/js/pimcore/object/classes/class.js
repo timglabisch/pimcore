@@ -462,6 +462,13 @@ pimcore.object.classes.klass = Class.create({
                     value: this.data.name
                 },
                 {
+                    xtype: "textfield",
+                    fieldLabel: t("table"),
+                    name: "table",
+                    width: 300,
+                    value: this.data.table
+                },
+                {
                     xtype: "textarea",
                     fieldLabel: t("description"),
                     name: "description",

@@ -82,7 +82,7 @@ class Object_Localizedfield_Resource extends Pimcore_Model_Resource_Abstract {
         }
 
         // remove relations
-        $this->db->delete("object_relations_" . $this->model->getObject()->getO_classId(), $this->db->quoteInto("ownertype = 'localizedfield' AND ownername = 'localizedfield' AND src_id = ?", $this->model->getObject()->getId()));
+        $this->db->delete("object_relations_" . $this->model->getObject()->getTableNameSuffix(), $this->db->quoteInto("ownertype = 'localizedfield' AND ownername = 'localizedfield' AND src_id = ?", $this->model->getObject()->getId()));
     }
 
     public function load () {

@@ -64,6 +64,15 @@ class Object_Class_Resource extends Pimcore_Model_Resource_Abstract {
     }
 
     /**
+     * Get the TableName Suffix
+     *
+     * @return void
+     */
+    public function getTableNameSuffix() {
+        return ($this->model->getTable()?$this->model->getTable():$this->model->getId());
+    }
+
+    /**
      * Get the data for the object from database for the given name, or from the name which is set in the object
      *
      * @param string $name
@@ -90,7 +99,7 @@ class Object_Class_Resource extends Pimcore_Model_Resource_Abstract {
      * @return mixed
      */
     protected function getLayoutData () {
-        $file = PIMCORE_CLASS_DIRECTORY."/definition_". $this->model->getId() .".psf";
+        $file = PIMCORE_CLASS_DIRECTORY."/definition_". $this->getTableNameSuffix() .".psf";
         if(is_file($file)) {
             return Pimcore_Tool_Serialize::unserialize(file_get_contents($file));
         }
@@ -134,18 +143,18 @@ class Object_Class_Resource extends Pimcore_Model_Resource_Abstract {
         $this->db->update("classes", $data, $this->db->quoteInto("id = ?", $this->model->getId()));
 
          // save definition as a serialized file
-        $definitionFile = PIMCORE_CLASS_DIRECTORY."/definition_". $this->model->getId() .".psf";
+        $definitionFile = PIMCORE_CLASS_DIRECTORY."/definition_". $this->getTableNameSuffix() .".psf";
         if(!is_writable(dirname($definitionFile)) || (is_file($definitionFile) && !is_writable($definitionFile))) {
             throw new Exception("Cannot write definition file in: " . $definitionFile . " please check write permission on this directory.");
         }
         file_put_contents($definitionFile, Pimcore_Tool_Serialize::serialize($this->model->layoutDefinitions));
         chmod($definitionFile,0766);
                     
-        $objectTable = "object_query_" . $this->model->getId();
-        $objectDatastoreTable = "object_store_" . $this->model->getId();
-        $objectDatastoreTableRelation = "object_relations_" . $this->model->getId();
+        $objectTable = "object_query_" . $this->getTableNameSuffix();
+        $objectDatastoreTable = "object_store_" . $this->getTableNameSuffix();
+        $objectDatastoreTableRelation = "object_relations_" . $this->getTableNameSuffix();
 
-        $objectView = "object_" . $this->model->getId();
+        $objectView = "object_" . $this->getTableNameSuffix();
 
         // create object table if not exists
         $protectedColums = array("oo_id", "oo_classId", "oo_className");
@@ -255,7 +264,7 @@ class Object_Class_Resource extends Pimcore_Model_Resource_Abstract {
                     $this->db->query('ALTER TABLE `' . $table . '` DROP COLUMN `' . $value . '`;');
                     
                     if($emptyRelations) {
-                        $tableRelation = "object_relations_" . $this->model->getId();
+                        $tableRelation = "object_relations_" . $this->getTableNameSuffix();
                         $this->db->delete($tableRelation, "fieldname = " . $this->db->quote($value) . " AND ownertype = 'object'");
                     }
 
@@ -370,10 +379,10 @@ class Object_Class_Resource extends Pimcore_Model_Resource_Abstract {
 
         $this->db->delete("classes", $this->db->quoteInto("id = ?", $this->model->getId()));
 
-        $objectTable = "object_query_" . $this->model->getId();
-        $objectDatastoreTable = "object_store_" . $this->model->getId();
-        $objectDatastoreTableRelation = "object_relations_" . $this->model->getId();
-        $objectMetadataTable = "object_metadata_" . $this->model->getId();
+        $objectTable = "object_query_" . $this->getTableNameSuffix();
+        $objectDatastoreTable = "object_store_" . $this->getTableNameSuffix();
+        $objectDatastoreTableRelation = "object_relations_" . $this->getTableNameSuffix();
+        $objectMetadataTable = "object_metadata_" . $this->getTableNameSuffix();
 
         
         $this->db->query('DROP TABLE `' . $objectTable . '`');
@@ -387,28 +396,28 @@ class Object_Class_Resource extends Pimcore_Model_Resource_Abstract {
         $this->db->delete("objects", $this->db->quoteInto("o_classId = ?", $this->model->getId()));
 
         // remove fieldcollection tables
-        $allTables = $this->db->fetchAll("SHOW TABLES LIKE 'object_collection_%_" . $this->model->getId() . "'");
+        $allTables = $this->db->fetchAll("SHOW TABLES LIKE 'object_collection_%_" . $this->model->getTable() . "'");
         foreach ($allTables as $table) {
             $collectionTable = current($table);
             $this->db->query("DROP TABLE IF EXISTS `".$collectionTable."`");
         }
 
         // remove localized fields tables and views
-        $allViews = $this->db->fetchAll("SHOW TABLES LIKE 'object_localized_" . $this->model->getId() . "_%'");
+        $allViews = $this->db->fetchAll("SHOW TABLES LIKE 'object_localized_" . $this->model->getTable() . "_%'");
         foreach ($allViews as $view) {
             $localizedView = current($view);
             $this->db->query("DROP VIEW IF EXISTS `".$localizedView."`");
         }
-        $this->db->query("DROP TABLE IF EXISTS object_localized_data_" . $this->model->getId());
+        $this->db->query("DROP TABLE IF EXISTS object_localized_data_" . $this->model->getTable());
 
         // objectbrick tables
-        $allTables = $this->db->fetchAll("SHOW TABLES LIKE 'object_brick_%_" . $this->model->getId() . "'");
+        $allTables = $this->db->fetchAll("SHOW TABLES LIKE 'object_brick_%_" . $this->model->getTable() . "'");
         foreach ($allTables as $table) {
             $brickTable = current($table);
             $this->db->query("DROP TABLE `".$brickTable."`");
         }
         
-        @unlink(PIMCORE_CLASS_DIRECTORY."/definition_". $this->model->getId() .".psf");
+        @unlink(PIMCORE_CLASS_DIRECTORY."/definition_". $this->model->getTable() .".psf");
     }
 
     /**
@@ -421,7 +430,7 @@ class Object_Class_Resource extends Pimcore_Model_Resource_Abstract {
             "o_className" => $newName
         ), $this->db->quoteInto("o_classId = ?", $this->model->getId()));
 
-        $this->db->update("object_query_" . $this->model->getId(), array(
+        $this->db->update("object_query_" . $this->getTableNameSuffix(), array(
             "oo_className" => $newName
         ));
     }

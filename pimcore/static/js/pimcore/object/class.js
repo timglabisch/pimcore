@@ -164,7 +164,39 @@ pimcore.object.klass = Class.create({
     },
 
     addClass: function () {
-        Ext.MessageBox.prompt(t('add_class'), t('enter_the_name_of_the_new_class'), this.addClassComplete.bind(this), null, null, "");
+
+        var win = new Ext.Window({
+            title: t('add_class'),
+            layout: 'fit',
+            items : [
+                {
+                    xtype: 'form',
+                    padding:  15,
+                    items: [
+                        {
+                            xtype: 'textfield',
+                            name: 'className',
+                            fieldLabel: t('enter_the_name_of_the_new_class')
+                        },
+                        {
+                            xtype: 'textfield',
+                            name: 'classTable',
+                            fieldLabel: t('enter_the_tablename_of_the_new_class')
+                        },
+                        {
+                            xtype: 'button',
+                            text: t('save'),
+                            handler: function() {
+                                console.log('ok!');
+                            }
+                        }
+                    ]
+                }
+
+            ]
+        });
+        win.show();
+        //Ext.MessageBox.prompt(t('add_class'), t('enter_the_name_of_the_new_class'), this.addClassComplete.bind(this), null, null, "");
     },
 
     addClassComplete: function (button, value, object) {

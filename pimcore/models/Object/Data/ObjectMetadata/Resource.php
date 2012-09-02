@@ -66,8 +66,8 @@ class Object_Data_ObjectMetadata_Resource extends Pimcore_Model_Resource_Abstrac
      */
     public function createOrUpdateTable($class) {
 
-        $classId = $class->getId();
-        $table = "object_metadata_" . $classId;
+        $classSuffix = ($class->getTable()?$class->getTable():$class->getId());
+        $table = "object_metadata_" . $classSuffix;
 
         $this->db->query("CREATE TABLE IF NOT EXISTS `" . $table . "` (
 		  `o_id` int(11) NOT NULL default '0',

@@ -19,9 +19,9 @@ class Object_Objectbrick_Definition_Resource extends Object_Fieldcollection_Defi
     
     public function getTableName (Object_Class $class, $query = false) {
         if($query) {
-             return "object_brick_query_" . $this->model->getKey() . "_" . $class->getId();
+             return "object_brick_query_" . $this->model->getKey() . "_" . ($class->getTable()?$class->getTable():$class->getId());
         } else {
-            return "object_brick_store_" . $this->model->getKey() . "_" . $class->getId();
+            return "object_brick_store_" . $this->model->getKey() . "_" . ($class->getTable()?$class->getTable():$class->getId());
         }
     }
     

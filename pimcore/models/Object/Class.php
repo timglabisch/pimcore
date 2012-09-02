@@ -30,6 +30,11 @@ class Object_Class extends Pimcore_Model_Abstract {
     /**
      * @var string
      */
+    public $table;
+
+    /**
+     * @var string
+     */
     public $description;
 
     /**
@@ -212,6 +217,7 @@ class Object_Class extends Pimcore_Model_Abstract {
 
         $cd .= 'public $o_classId = ' . $this->getId() . ";\n";
         $cd .= 'public $o_className = "' . $this->getName() . '"' . ";\n";
+        $cd .= 'public $o_table = "' . ($this->getTable()?$this->getTable():$this->getId()).'"' . ";\n";
 
         if (is_array($this->getFieldDefinitions()) && count($this->getFieldDefinitions())) {
             foreach ($this->getFieldDefinitions() as $key => $def) {
@@ -288,6 +294,7 @@ class Object_Class extends Pimcore_Model_Abstract {
 
         $cd .= 'public $classId = ' . $this->getId() . ";\n";
         $cd .= 'public $className = "' . $this->getName() . '"' . ";\n";
+        $cd .= 'public $o_table = "' . ($this->getTable()?$this->getTable():$this->getId()).'"' . ";\n";
 
         $cd .= "\n\n";
         $cd .= "}\n";
@@ -367,6 +374,13 @@ class Object_Class extends Pimcore_Model_Abstract {
     }
 
     /**
+     * @return string
+     */
+    function getTable() {
+        return $this->table;
+    }
+
+    /**
      * @return int
      */
     function getCreationDate() {
@@ -408,6 +422,14 @@ class Object_Class extends Pimcore_Model_Abstract {
      */
     function setName($name) {
         $this->name = $name;
+    }
+
+    /**
+     * @param string $name
+     * @return void
+     */
+    function setTable($tablename) {
+        $this->table = $tablename;
     }
 
     /**

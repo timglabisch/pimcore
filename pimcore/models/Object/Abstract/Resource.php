@@ -34,6 +34,15 @@ class Object_Abstract_Resource extends Element_Resource {
     }
 
     /**
+     * Get the TableName Suffix
+     *
+     * @return void
+     */
+    public function getTableNameSuffix() {
+        $this->model->getO_classId();
+    }
+
+    /**
      * Get the data for the object from database for the given id
      *
      * @param integer $id

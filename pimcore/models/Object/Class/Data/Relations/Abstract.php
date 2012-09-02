@@ -272,20 +272,20 @@ abstract class Object_Class_Data_Relations_Abstract extends Object_Class_Data {
 
         if($object instanceof Object_Concrete) {
             if (!method_exists($this, "getLazyLoading") or !$this->getLazyLoading() or $params["force"]) {
-                $relations = $db->fetchAll("SELECT * FROM object_relations_" . $object->getClassId() . " WHERE src_id = ? AND fieldname = ? AND ownertype = 'object'", array($object->getO_id(), $this->getName()));
+                $relations = $db->fetchAll("SELECT * FROM object_relations_" . $object->getTableNameSuffix() . " WHERE src_id = ? AND fieldname = ? AND ownertype = 'object'", array($object->getO_id(), $this->getName()));
             } else {
                 return null;
             }
         } else if ($object instanceof Object_Fieldcollection_Data_Abstract) {
-            $relations = $db->fetchAll("SELECT * FROM object_relations_" . $object->getObject()->getClassId() . " WHERE src_id = ? AND fieldname = ? AND ownertype = 'fieldcollection' AND ownername = ? AND position = ?", array($object->getObject()->getId(), $this->getName(), $object->getFieldname(), $object->getIndex()));
+            $relations = $db->fetchAll("SELECT * FROM object_relations_" . $object->getObject()->getTableNameSuffix() . " WHERE src_id = ? AND fieldname = ? AND ownertype = 'fieldcollection' AND ownername = ? AND position = ?", array($object->getObject()->getId(), $this->getName(), $object->getFieldname(), $object->getIndex()));
         } else if ($object instanceof Object_Localizedfield) {
-            $relations = $db->fetchAll("SELECT * FROM object_relations_" . $object->getObject()->getClassId() . " WHERE src_id = ? AND fieldname = ? AND ownertype = 'localizedfield' AND ownername = 'localizedfield' AND position = ?", array($object->getObject()->getId(), $this->getName(), $params["language"]));
+            $relations = $db->fetchAll("SELECT * FROM object_relations_" . $object->getObject()->getTableNameSuffix() . " WHERE src_id = ? AND fieldname = ? AND ownertype = 'localizedfield' AND ownername = 'localizedfield' AND position = ?", array($object->getObject()->getId(), $this->getName(), $params["language"]));
         } else if ($object instanceof Object_Objectbrick_Data_Abstract) {
-            $relations = $db->fetchAll("SELECT * FROM object_relations_" . $object->getObject()->getClassId() . " WHERE src_id = ? AND fieldname = ? AND ownertype = 'objectbrick' AND ownername = ? AND position = ?", array($object->getObject()->getId(), $this->getName(), $object->getFieldname(), $object->getType()));
+            $relations = $db->fetchAll("SELECT * FROM object_relations_" . $object->getObject()->getTableNameSuffix() . " WHERE src_id = ? AND fieldname = ? AND ownertype = 'objectbrick' AND ownername = ? AND position = ?", array($object->getObject()->getId(), $this->getName(), $object->getFieldname(), $object->getType()));
 
             // THIS IS KIND A HACK: it's necessary because of this bug PIMCORE-1454 and therefore cannot be removed
             if(count($relations) < 1) {
-                $relations = $db->fetchAll("SELECT * FROM object_relations_" . $object->getObject()->getClassId() . " WHERE src_id = ? AND fieldname = ? AND ownertype = 'objectbrick' AND ownername = ? AND (position IS NULL OR position = '')", array($object->getObject()->getId(), $this->getName(), $object->getFieldname()));
+                $relations = $db->fetchAll("SELECT * FROM object_relations_" . $object->getObject()->getTableNameSuffix() . " WHERE src_id = ? AND fieldname = ? AND ownertype = 'objectbrick' AND ownername = ? AND (position IS NULL OR position = '')", array($object->getObject()->getId(), $this->getName(), $object->getFieldname()));
             }
             // HACK END
         }

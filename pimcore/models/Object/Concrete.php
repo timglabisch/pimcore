@@ -17,7 +17,7 @@
  
 class Object_Concrete extends Object_Abstract {
 
-    public static $systemColumnNames = array("id", "fullpath", "published", "creationDate", "modificationDate", "filename", "classname");
+    public static $systemColumnNames = array("id", "fullpath", "published", "creationDate", "modificationDate", "filename", "classname", "table");
 
     /**
      * @var boolean
@@ -33,6 +33,11 @@ class Object_Concrete extends Object_Abstract {
      * @var integer
      */
     public $o_classId;
+
+    /**
+     * @var string
+     */
+    public $o_table;
 
     /**
      * @var string
@@ -434,6 +439,36 @@ class Object_Concrete extends Object_Abstract {
     /**
      * @return string
      */
+    public function getO_table() {
+        return $this->o_table;
+    }
+
+    /**
+     * @return string
+     */
+    public function getTable() {
+        return $this->getO_table();
+    }
+
+    /**
+     * @param int $o_table
+     * @return void
+     */
+    public function setO_table($o_table) {
+        $this->o_table = $o_table;
+    }
+
+    /**
+     * @param int $o_table
+     * @return void
+     */
+    public function setTable($o_classId) {
+        $this->setO_table($o_classId);
+    }
+
+    /**
+     * @return string
+     */
     public function getO_className() {
         return $this->o_className;
     }
@@ -513,6 +548,15 @@ class Object_Concrete extends Object_Abstract {
     public function getOmitMandatoryCheck()
     {
         return $this->omitMandatoryCheck;
+    }
+
+   /**
+     * Get the TableName Suffix
+     *
+     * @return void
+     */
+    public function getTableNameSuffix() {
+        return ($this->getTable()?$this->getTable():$this->getClassId());
     }
 
     /**

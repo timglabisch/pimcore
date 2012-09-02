@@ -120,6 +120,7 @@ class Admin_ClassController extends Pimcore_Controller_Action_Admin {
         $class->setModificationDate(time());
         $class->setUserModification($this->user->getId());
         $class->setIcon($importData["icon"]);
+        $class->setTable($importData["table"]);
         $class->setAllowInherit($importData["allowInherit"]);
         $class->setAllowVariants($importData["allowVariants"]);
         $class->setParentClass($importData["parentClass"]);
