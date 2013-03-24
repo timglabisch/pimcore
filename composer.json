@@ -1,0 +1,6 @@
+{
+    "require": {
+        "zendframework/zend-di": "2.1.*@dev",
+        "zendframework/zend-servicemanager": "2.1.*@dev"
+    }
+}

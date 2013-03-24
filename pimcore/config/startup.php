@@ -72,6 +72,10 @@ set_include_path(implode(PATH_SEPARATOR, $includePaths));
 // helper functions
 include(dirname(__FILE__) . "/helper.php");
 
+// autloading vendors
+//@TODO Composer throws some deptected warnings, ...
+@require PIMCORE_PATH.'/../vendor/autoload.php';
+
 // setup zend framework and pimcore
 require_once "Pimcore.php";
 require_once "Logger.php";

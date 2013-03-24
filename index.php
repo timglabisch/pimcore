@@ -14,13 +14,20 @@
  */
 include_once("pimcore/config/startup.php");
 
+//todo: this config should be editable by the user, by merging an own configuration with this.
+$config = require 'pimcore/config/config.php';
+
+$serviceManager = new Pimcore_Service_Manager(
+    new Zend\ServiceManager\Config($config['service_manager'])
+);
+
 try {
-	Pimcore::run();
+    $serviceManager->getPimcore()->run();
 
 } catch (Exception $e) {
     // handle exceptions, log to file
     if(class_exists("Logger")) {
-    	Logger::emerg($e);
+        $serviceManager->getLogger()->emerg($e);
     }
    	throw $e;
 }

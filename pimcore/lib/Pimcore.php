@@ -13,7 +13,7 @@
  * @license    http://www.pimcore.org/license     New BSD License
  */
 
-class Pimcore {
+class Pimcore implements \Zend\ServiceManager\ServiceManagerAwareInterface {
 
     /**
      * @var bool
@@ -26,27 +26,35 @@ class Pimcore {
     private static $inShutdown = false;
 
     /**
-     * @static
+     * @var \Zend\ServiceManager\ServiceManager
+     */
+    protected $serviceManager;
+
+    public function setServiceManager(\Zend\ServiceManager\ServiceManager $serviceManager) {
+        $this->serviceManager = $serviceManager;
+    }
+
+    /**
      * @throws Exception|Zend_Controller_Router_Exception
      */
-    public static function run() {
+    public function run() {
 
-        self::setSystemRequirements();
+        $this->setSystemRequirements();
 
         // detect frontend (website)
         $frontend = Pimcore_Tool::isFrontend();
 
         // enable the output-buffer, why? see in self::outputBufferStart()
         //if($frontend) {
-        self::outputBufferStart();
+        $this->outputBufferStart();
         //}
 
-        self::initAutoloader();
-        self::initConfiguration();
-        self::setupFramework();
+        $this->initAutoloader();
+        $this->initConfiguration();
+        $this->setupFramework();
 
         // config is loaded now init the real logger
-        self::initLogger();
+        $this->initLogger();
 
         // set locale data cache, this must be after self::initLogger() since Pimcore_Model_Cache requires the logger
         // to log if there's something wrong with the cache configuration in cache.xml
@@ -56,11 +64,11 @@ class Pimcore {
         Zend_Db_Table_Abstract::setDefaultMetadataCache($cache);
 
         // load plugins and modules (=core plugins)
-        self::initModules();
-        self::initPlugins();
+        $this->initModules();
+        $this->initPlugins();
 
         // init front controller
-        $front = Zend_Controller_Front::getInstance();
+        $front = $this->serviceManager->get('Zend_Controller_Front');
 
         $conf = Pimcore_Config::getSystemConfig();
         if(!$conf) {
@@ -96,7 +104,7 @@ class Pimcore {
             $front->registerPlugin(new Pimcore_Controller_Plugin_Cache(), 901); // for caching
         }
 
-        self::initControllerFront($front);
+        $this->initControllerFront($front);
 
         // set router
         $router = $front->getRouter();
@@ -260,10 +268,9 @@ class Pimcore {
     }
 
     /**
-     * @static
      * @param Zend_Controller_Front $front
      */
-    public static function initControllerFront (Zend_Controller_Front $front) {
+    public function initControllerFront (Zend_Controller_Front $front) {
 
         // disable build-in error handler
         $front->setParam('noErrorHandler', true);
@@ -280,11 +287,7 @@ class Pimcore {
         $front->setDefaultModule(PIMCORE_FRONTEND_MODULE);
     }
 
-    /**
-     * @static
-     *
-     */
-    public static function initLogger() {
+    public function initLogger() {
 
         // for forks, etc ...
         Logger::resetLoggers();
@@ -375,11 +378,7 @@ class Pimcore {
         }
     }
 
-    /**
-     * @static
-     *
-     */
-    public static function setSystemRequirements() {
+    public function setSystemRequirements() {
         // try to set system-internal variables
 
         $maxExecutionTime = 240;
@@ -414,16 +413,15 @@ class Pimcore {
     /**
      * initialisze system modules and register them with the broker
      *
-     * @static
      * @return void
      */
-    public static function initModules() {
+    public function initModules() {
 
         $broker = Pimcore_API_Plugin_Broker::getInstance();
         $broker->registerModule("Search_Backend_Module");
     }
 
-    public static function initPlugins() {
+    public function initPlugins() {
         // add plugin include paths
 
         $autoloader = Zend_Loader_Autoloader::getInstance();
@@ -540,11 +538,7 @@ class Pimcore {
 
     }
 
-    /**
-     * @static
-     *
-     */
-    public static function initAutoloader() {
+    public function initAutoloader() {
 
         $autoloader = Zend_Loader_Autoloader::getInstance();
 
@@ -589,10 +583,9 @@ class Pimcore {
     }
 
     /**
-     * @static
      * @return bool
      */
-    public static function initConfiguration() {
+    public function initConfiguration() {
                
         // init configuration
         try {
@@ -660,11 +653,7 @@ class Pimcore {
         return $debug;
     }
 
-    /**
-     * @static
-     *
-     */
-    public static function setupFramework () {
+    public function setupFramework () {
 
         // try to set tmp directoy into superglobals, ZF and other frameworks (PEAR) sometimes relies on that
         foreach (array('TMPDIR', 'TEMP', 'TMP', 'windir', 'SystemRoot') as $key) {
@@ -775,10 +764,9 @@ class Pimcore {
      * the request is not finished or wasn't closed (sure the script is still running), what is really not necessary
      * This method is only called in Pimcore_Controller_Action_Frontend::init() to enable it only for frontend/website HTTP requests
      * - more infos see also self::outputBufferEnd()
-     * @static
      * @return void
      */
-    public static function outputBufferStart () {
+    public function outputBufferStart () {
 
         // only for HTTP(S)
         if(php_sapi_name() != "cli") {
@@ -789,10 +777,9 @@ class Pimcore {
     /**
      * if this method is called in self::shutdown() it forces the browser to close the connection an allows the
      * shutdown-function to run in the background
-     * @static
      * @return string
      */
-    public static function outputBufferEnd ($data) {
+    public function outputBufferEnd ($data) {
 
         $contentEncoding = null;
         if( preg_match('@(?:^|,)\\s*((?:x-)?gzip)\\s*(?:$|,|;\\s*q=(?:0\\.|1))@' ,$_SERVER["HTTP_ACCEPT_ENCODING"] ,$m) ) {
