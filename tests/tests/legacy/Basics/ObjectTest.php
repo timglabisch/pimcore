@@ -1,26 +1,39 @@
 <?php
-/**
- * Created by IntelliJ IDEA.
- * User: josef.aichhorn@elements.at
- * Date: 11.11.2013
- */
 
+class TestSuite_Basics_ObjectTest extends Pimcore_Test_Case {
 
-class TestSuite_Basics_ObjectTest extends Test_Base {
 
     public function setUp() {
-        Test_Tool::cleanUp();
-        parent::setUp();
-    }
 
+        parent::setUp();
+
+        $object = Object_Class::create();
+        $object->setName('Unittest');
+
+        $objectlayout = new Object_Class_Layout();
+
+        $inputfield = new Object_Class_Data_Textarea();
+        $inputfield->setTitle('title');
+        $inputfield->setName('InputField');
+
+        $objectlayout->addChild($inputfield);
+
+        $object->setLayoutDefinitions($objectlayout);
+        $object->setUserOwner(1);
+        $object->save();
+
+        $resource = $object->getResource();
+
+        if(is_callable(array($resource, '__destruct')))
+            $resource->__destruct();
+    }
 
     /**
      * Verifies that a object with the same parent ID cannot be created.
      */
     public function testParentIdentical() {
-        $this->printTestName();
 
-        $savedObject = Test_Tool::createEmptyObject();
+        $savedObject = Pimcore_Test_Helper_Tool::createEmptyObject();
         $this->assertTrue($savedObject->getId() > 0);
 
         $savedObject->setParentId($savedObject->getId());
@@ -36,9 +49,8 @@ class TestSuite_Basics_ObjectTest extends Test_Base {
      * Parent ID of a new object cannot be 0
      */
     public function testParentIs0() {
-        $this->printTestName();
 
-        $savedObject = Test_Tool::createEmptyObject("", false);
+        $savedObject = Pimcore_Test_Helper_Tool::createEmptyObject("", false);
         $this->assertTrue($savedObject->getId() == 0);
 
         $savedObject->setParentId(0);

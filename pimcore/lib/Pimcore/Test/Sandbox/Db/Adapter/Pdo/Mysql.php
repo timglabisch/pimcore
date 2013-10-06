@@ -48,7 +48,8 @@ class Pimcore_Test_Sandbox_Db_Adapter_Pdo_Mysql extends \Zend_Db_Adapter_Pdo_Mys
         ');
 
         while ($tablesToCopy = $statementTablesToCopy->fetch_array()) {
-            $db->query($q = 'CREATE TABLE `' . $this->configToReset["dbname"] . '`.`' . $tablesToCopy["TABLE_NAME"] . '` SELECT * FROM `' . $this->configToReset["orig_dbname"] . '`.`' . $tablesToCopy["TABLE_NAME"] . '`'); // LIMIT 0');
+            $db->query($q = 'CREATE TABLE `' . $this->configToReset["dbname"] . '`.`' . $tablesToCopy["TABLE_NAME"] . '` LIKE `' . $this->configToReset["orig_dbname"] . '`.`' . $tablesToCopy["TABLE_NAME"] . '`'); // LIMIT 0');
+            $db->query($q = 'INSERT `' . $this->configToReset["dbname"] . '`.`' . $tablesToCopy["TABLE_NAME"] . '` SELECT * FROM `' . $this->configToReset["orig_dbname"] . '`.`' . $tablesToCopy["TABLE_NAME"] . '`'); // LIMIT 0');
         }
 
         $db->close();
