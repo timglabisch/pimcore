@@ -34,8 +34,29 @@ class Pimcore_Test_Case extends \PHPUnit_Framework_TestCase {
 
         $filesystemSandbox = new Pimcore_Test_Sandbox_Filesystem();
         $filesystemSandbox->reset();
+    }
 
+    function dispatch($request) {
+        if(is_string($request)) {
+            $r = new Zend_Controller_Request_HttpTestCase();
+            $r->setRequestUri($request);
+            return $this->dispatchRequest($r);
+        }
 
+        if($request instanceof Zend_Controller_Request_HttpTestCase) {
+            return $this->dispatchRequest($request);
+        }
+
+        throw new \Exception('bad Argument, string or Zend_Controller_Request_HttpTestCase required');
+    }
+
+    function dispatchRequest($request) {
+        $front = Pimcore::getControllerFront();
+
+        $response = new Zend_Controller_Response_HttpTestCase();
+        $front->dispatch($request, $response);
+        $front->resetInstance();
+        return $response;
     }
 
 }
