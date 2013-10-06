@@ -6,7 +6,7 @@ class TestSuite_Rest_AssetTest extends Pimcore_Test_Case {
 
     public function testCreateAssetFile() {
 
-        $originalContent = file_get_contents(TESTS_PATH . "/resources/assets/images/image5.jpg");
+        $originalContent = file_get_contents(__DIR__ . "/../../fixtures/assets/images/image5.jpg");
 
         $this->assertTrue(strlen($originalContent) > 0);
 

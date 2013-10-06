@@ -50,7 +50,7 @@ class Pimcore {
         static::initPlugins();
 
         // init front controller
-        $front = Zend_Controller_Front::getInstance();
+        $front = static::getControllerFront();
         $frontend = Pimcore_Tool::isFrontend();
 
         static::redirectIfNotInstalled();
@@ -70,6 +70,13 @@ class Pimcore {
         static::handelErrorReporting();
 
         static::dispatch($front, static::displayErrors());
+    }
+
+    /**
+     * @return Zend_Controller_Front
+     */
+    public static function getControllerFront() {
+        return Zend_Controller_Front::getInstance();
     }
 
     /**

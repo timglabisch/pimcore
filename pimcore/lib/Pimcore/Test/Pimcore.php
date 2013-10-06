@@ -43,4 +43,10 @@ class Pimcore_Test_Pimcore extends Pimcore {
         return true;
     }
 
+    public static function getControllerFront() {
+        $front = parent::getControllerFront();
+        $front->setDispatcher(new Pimcore_Test_Controller_Dispatcher_Standard());
+        return $front;
+    }
+
 }
