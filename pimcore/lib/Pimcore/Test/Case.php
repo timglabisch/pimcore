@@ -16,11 +16,26 @@
 
 class Pimcore_Test_Case extends \PHPUnit_Framework_TestCase {
 
+    protected static $copyOfZendRegistry;
+
     function setUp() {
+
+        if(!static::$copyOfZendRegistry) {
+            static::$copyOfZendRegistry = clone Zend_Registry::getInstance();
+        } else {
+            Zend_Registry::_unsetInstance();
+            Zend_Registry::setInstance(static::$copyOfZendRegistry);
+        }
+
+
+        Pimcore_Model_Cache::clearAll();
+
         Pimcore_Resource::get()->reset();
 
         $filesystemSandbox = new Pimcore_Test_Sandbox_Filesystem();
         $filesystemSandbox->reset();
+
+
     }
 
 }

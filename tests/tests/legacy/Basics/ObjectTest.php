@@ -8,7 +8,7 @@ class TestSuite_Basics_ObjectTest extends Pimcore_Test_Case {
         parent::setUp();
 
         $object = Object_Class::create();
-        $object->setName('Unittest');
+        $object->setName('UnittestObject');
 
         $objectlayout = new Object_Class_Layout();
 
@@ -33,7 +33,7 @@ class TestSuite_Basics_ObjectTest extends Pimcore_Test_Case {
      */
     public function testParentIdentical() {
 
-        $savedObject = Pimcore_Test_Helper_Tool::createEmptyObject();
+        $savedObject = Pimcore_Test_Helper_Tool::createEmptyObject('UnittestObject');
         $this->assertTrue($savedObject->getId() > 0);
 
         $savedObject->setParentId($savedObject->getId());
@@ -50,7 +50,7 @@ class TestSuite_Basics_ObjectTest extends Pimcore_Test_Case {
      */
     public function testParentIs0() {
 
-        $savedObject = Pimcore_Test_Helper_Tool::createEmptyObject("", false);
+        $savedObject = Pimcore_Test_Helper_Tool::createEmptyObject('UnittestObject', "", false);
         $this->assertTrue($savedObject->getId() == 0);
 
         $savedObject->setParentId(0);

@@ -402,11 +402,13 @@ class Pimcore_Test_Helper_Tool
      * @param bool $save
      * @return Object_Unittest
      */
-    public static function createEmptyObject($keyPrefix = "", $save = true) {
-        if ($keyPrefix == null) {
+    public static function createEmptyObject($objectname, $keyPrefix = "", $save = true) {
+        if($keyPrefix == null) {
             $keyPrefix = "";
         }
-        $emptyObject = new Object_Unittest();
+
+        $classname = 'Object_'. $objectname;
+        $emptyObject = new $classname();
         $emptyObject->setOmitMandatoryCheck(true);
         $emptyObject->setParentId(1);
         $emptyObject->setUserOwner(1);
