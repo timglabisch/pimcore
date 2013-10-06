@@ -24,7 +24,7 @@ class Pimcore_Test_Case extends \PHPUnit_Framework_TestCase {
             static::$copyOfZendRegistry = clone Zend_Registry::getInstance();
         } else {
             Zend_Registry::_unsetInstance();
-            Zend_Registry::setInstance(static::$copyOfZendRegistry);
+            Zend_Registry::setInstance(clone static::$copyOfZendRegistry);
         }
 
 
