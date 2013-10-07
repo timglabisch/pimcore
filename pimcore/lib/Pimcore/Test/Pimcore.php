@@ -39,6 +39,10 @@ class Pimcore_Test_Pimcore extends Pimcore {
         # we dont want Pimcore to Dispatch for now.
     }
 
+    public static function isFrontend() {
+        return false;
+    }
+
     public static function shouldThrowExceptions() {
         return true;
     }

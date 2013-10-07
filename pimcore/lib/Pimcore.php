@@ -51,7 +51,7 @@ class Pimcore {
 
         // init front controller
         $front = static::getControllerFront();
-        $frontend = Pimcore_Tool::isFrontend();
+        $frontend = static::isFrontend();
 
         static::redirectIfNotInstalled();
 
@@ -70,6 +70,10 @@ class Pimcore {
         static::handelErrorReporting();
 
         static::dispatch($front, static::displayErrors());
+    }
+
+    static function isFrontend() {
+        return Pimcore_Tool::isFrontend();
     }
 
     /**
