@@ -125,7 +125,7 @@ class Pimcore_Test_Helper_Tool
      * @param  Asset $asset2
      * @return bool
      */
-    public static function assetsAreEqual($asset1, $asset2, $ignoreCopyDifferences = false, $id = false) {
+    public static function assetsAreEqual(Asset $asset1, Asset $asset2, $ignoreCopyDifferences = false, $id = false) {
 
         if ($asset1 instanceof Asset and $asset2 instanceof Asset) {
 
@@ -136,12 +136,12 @@ class Pimcore_Test_Helper_Tool
                 $id = uniqid();
             }
 
-            $myFile = TESTS_PATH . "/output/asset1-" . $id . ".txt";
+            $myFile = $asset1->getFilename();
             $fh = fopen($myFile, 'w');
             fwrite($fh, $a1Hash);
             fclose($fh);
 
-            $myFile = TESTS_PATH . "/output/asset2-" . $id . ".txt";
+            $myFile = $asset2->getFilename();
             $fh = fopen($myFile, 'w');
             fwrite($fh, $a2Hash);
             fclose($fh);
@@ -532,9 +532,7 @@ class Pimcore_Test_Helper_Tool
         if ($keyPrefix == null) {
             $keyPrefix = "";
         }
-        if (!$data) {
-            $data = file_get_contents(TESTS_PATH . "/resources/assets/images/image5.jpg");
-        }
+
         $asset = new Asset_Image();
         $asset->setParentId(1);
         $asset->setUserOwner(1);

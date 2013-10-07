@@ -51,13 +51,13 @@ class TestSuite_Rest_AssetTest extends Pimcore_Test_Case {
 
     public function testDelete() {
 
-        $originalContent = file_get_contents(TESTS_PATH . "/resources/assets/images/image5.jpg");
+        $originalContent = file_get_contents(__DIR__ . "/../../fixtures/assets/images/image5.jpg");
         $savedAsset = Pimcore_Test_Helper_Tool::createImageAsset("", $originalContent, true);
 
         $savedAsset = Asset::getById($savedAsset->getId());
         $this->assertNotNull($savedAsset);
 
-        $response = self::getRestClient()->deleteAsset($savedAsset->getId());
+        $response = $this->getRestClient()->deleteAsset($savedAsset->getId());
         $this->assertTrue($response->success, "request wasn't successful");
 
         // this will wipe our local cache
@@ -70,7 +70,7 @@ class TestSuite_Rest_AssetTest extends Pimcore_Test_Case {
     public function testFolder() {
 
         // create folder but don't save it
-        $folder = Pimcore_Test_Helper_Tool::createImageAsset("myfolder", null, false);
+        $folder = Pimcore_Test_Helper_Tool::createImageAsset("myfolder", file_get_contents(__DIR__ . "/../../fixtures/assets/images/image5.jpg"), false);
         $folder->setType("folder");
 
         $fitem = Asset::getById($folder->getId());
@@ -85,10 +85,10 @@ class TestSuite_Rest_AssetTest extends Pimcore_Test_Case {
         $folderDirect = Asset::getById($id);
         $this->assertTrue($folderDirect->getType() == "folder");
 
-        $folderRest = self::getRestClient()->getAssetById($id);
+        $folderRest = $this->getRestClient()->getAssetById($id);
         $this->assertTrue(Pimcore_Test_Helper_Tool::assetsAreEqual($folderRest, $folderDirect, false), "assets are not equal");
 
-        self::getRestClient()->deleteAsset($id);
+        $this->getRestClient()->deleteAsset($id);
 
         Pimcore::collectGarbage();
         $folderDirect = Asset::getById($id);
