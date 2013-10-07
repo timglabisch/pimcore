@@ -434,7 +434,7 @@ class Webservice_RestController extends Pimcore_Controller_Action_Webservice {
                 $this->encoder->encode(array("success" => $success));
                 return;
             } else if ($this->isPost() || $this->isPut()) {
-                $data = file_get_contents("php://input");
+                $data = $this->getRequest()->getRawBody();
                 $data = Zend_Json::decode($data);
 
                 $type = $data["type"];
@@ -486,7 +486,10 @@ class Webservice_RestController extends Pimcore_Controller_Action_Webservice {
                 return;
 
             }
-        } catch (Exception $e) {
+        } catch (Pimcore_Test_Exception_AvoidExit $e) {
+           throw $e;
+        }
+        catch (Exception $e) {
             Logger::error($e);
             $this->encoder->encode(array("success" => false, "msg" => (string) $e));
         }

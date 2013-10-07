@@ -19,7 +19,10 @@ class TestSuite_Rest_AssetTest extends Pimcore_Test_Case {
 
         $time = time();
 
-        $result = self::getRestClient()->createAsset($asset);
+        $result = $this->getRestClient()->createAsset($asset);
+
+        // create asset gibt nur das Data objekt zurück, ist wohl doch nötig die RestClient api einzuhalten
+
         $this->assertTrue($result->id > 0, "request not successful");
         $this->assertEquals(2, Pimcore_Test_Helper_Tool::getAssetCount());
 
@@ -35,7 +38,7 @@ class TestSuite_Rest_AssetTest extends Pimcore_Test_Case {
         $this->assertEquals("bla", $property->getData());
 
         // as the asset key is unique there must be exactly one object with that key
-        $list = self::getRestClient()->getAssetList("filename = '" . $asset->getKey() . "'");
+        $list = $this->getRestClient()->getAssetList("filename = '" . $asset->getKey() . "'");
         $this->assertEquals(1, count($list));
 
         // now check if the file exists

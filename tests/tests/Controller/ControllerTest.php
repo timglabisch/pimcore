@@ -3,10 +3,9 @@
 class ControllerTest extends Pimcore_Test_Case {
 
 
-    public function testParentIdentical() {
-
+    public function testDispatchStart() {
         $res = $this->dispatch('/');
-        $a = $res;
+        $this->assertNotEmpty($res->getBody());
     }
 
 }

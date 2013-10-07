@@ -49,4 +49,40 @@ class Pimcore_Test_Pimcore extends Pimcore {
         return $front;
     }
 
+    public static function testDispatch($request) {
+        if(is_string($request)) {
+            $r = new Zend_Controller_Request_HttpTestCase();
+            $r->setRequestUri($request);
+            return static::testDispatchRequest($r);
+        }
+
+        if($request instanceof Zend_Controller_Request_HttpTestCase) {
+            return static::testDispatchRequest($request);
+        }
+
+        throw new \Exception('bad Argument, string or Zend_Controller_Request_HttpTestCase required');
+    }
+
+    public static function testDispatchRequest($request) {
+        $front = Pimcore::getControllerFront();
+
+        $response = new Zend_Controller_Response_HttpTestCase();
+
+        $front->throwExceptions(true);
+
+        try {
+            $front->dispatch($request, $response);
+        } catch(Pimcore_Test_Exception_AvoidExit $e) {
+            return $e->getResponse();
+        }
+
+        foreach($response->getException() as $exception) {
+            if($exception instanceof Pimcore_Test_Exception_AvoidExit) {
+                return $exception->getResponse();
+            }
+        }
+
+        return $response;
+    }
+
 }

@@ -17,6 +17,8 @@
 class Pimcore_Test_Case extends \PHPUnit_Framework_TestCase {
 
     protected static $copyOfZendRegistry;
+    protected static $user = null;
+    protected static $restclient = null;
 
     function setUp() {
 
@@ -34,29 +36,45 @@ class Pimcore_Test_Case extends \PHPUnit_Framework_TestCase {
 
         $filesystemSandbox = new Pimcore_Test_Sandbox_Filesystem();
         $filesystemSandbox->reset();
+
+        static::$user = null;
+        static::$restclient = null;
     }
 
+    function createAdminUser() {
+
+        if(static::$user)
+            return static::$user;
+
+        $user = new User();
+        $user->setAdmin(true);
+        $user->setFirstname('Unittest');
+        $user->setLastname('Unittest');
+        $user->setPassword('APIKEY');
+        $user->save();
+
+        return static::$user = $user;
+    }
+
+    /**
+     * @return Pimcore_Test_Tool_RestClient
+     */
+    function getRestclient() {
+
+        if(static::$restclient)
+            return static::$restclient;
+
+        $restclient = new Pimcore_Test_Tool_RestClient();
+        $restclient->setApiKey($this->createAdminUser()->getApiKey());
+        return static::$restclient = $restclient;
+    }
+
+    /**
+     * @param $request
+     * @return Zend_Controller_Response_HttpTestCase
+     */
     function dispatch($request) {
-        if(is_string($request)) {
-            $r = new Zend_Controller_Request_HttpTestCase();
-            $r->setRequestUri($request);
-            return $this->dispatchRequest($r);
-        }
-
-        if($request instanceof Zend_Controller_Request_HttpTestCase) {
-            return $this->dispatchRequest($request);
-        }
-
-        throw new \Exception('bad Argument, string or Zend_Controller_Request_HttpTestCase required');
-    }
-
-    function dispatchRequest($request) {
-        $front = Pimcore::getControllerFront();
-
-        $response = new Zend_Controller_Response_HttpTestCase();
-        $front->dispatch($request, $response);
-        $front->resetInstance();
-        return $response;
+        return Pimcore_Test_Pimcore::testDispatch($request);
     }
 
 }

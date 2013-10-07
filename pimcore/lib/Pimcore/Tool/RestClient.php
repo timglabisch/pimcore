@@ -226,7 +226,7 @@ class Pimcore_Tool_RestClient
      * @param null $body
      * @return mixed
      */
-    private function doRequest($uri, $method = "GET", $body = null)
+    protected function doRequest($uri, $method = "GET", $body = null)
     {
         $client = $this->client;
         $client->setMethod($method);
