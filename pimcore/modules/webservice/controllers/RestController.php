@@ -170,7 +170,7 @@ class Webservice_RestController extends Pimcore_Controller_Action_Webservice {
                 $this->encoder->encode(array("success" => $success));
                 return;
             } else if ($this->isPost() || $this->isPut()) {
-                $data = file_get_contents("php://input");
+                $data = $this->getRequest()->getRawBody();
                 $data = Zend_Json::decode($data);
 
                 $type = $data["type"];
@@ -634,7 +634,7 @@ class Webservice_RestController extends Pimcore_Controller_Action_Webservice {
                 $this->encoder->encode(array("success" => $success));
                 return;
             } else if ($this->isPost() || $this->isPut()) {
-                $data = file_get_contents("php://input");
+                $data = $this->getRequest()->getRawBody();
                 $data = Zend_Json::decode($data);
 
                 $type = $data["type"];
@@ -875,7 +875,7 @@ class Webservice_RestController extends Pimcore_Controller_Action_Webservice {
             $condense = $this->getParam("condense");
             $this->checkUserPermission($type . "s");
             if ($this->isPost()) {
-                $data = file_get_contents("php://input");
+                $data = $this->getRequest()->getRawBody();
                 $idList = explode(',', $data);
             } else if ($this->getParam("ids")) {
                 $idList = explode(',', $this->getParam("ids"));

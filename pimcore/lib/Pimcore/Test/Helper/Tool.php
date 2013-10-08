@@ -421,10 +421,10 @@ class Pimcore_Test_Helper_Tool
         return $emptyObject;
     }
 
-    public static function createEmptyObjects($keyPrefix = "", $save = true, $count = 10) {
+    public static function createEmptyObjects($objectname, $keyPrefix = "", $save = true, $count = 10) {
         $result = array();
         for ($i = 0; $i < $count; $i++) {
-            $result[] = self::createEmptyObject($keyPrefix, $save);
+            $result[] = self::createEmptyObject($objectname, $keyPrefix, $save);
         }
         return $result;
     }
@@ -435,11 +435,12 @@ class Pimcore_Test_Helper_Tool
      * @param bool $save
      * @return Object_Unittest
      */
-    public static function createFullyFledgedObject($keyPrefix = "", $save = true, $seed = 1) {
+    public static function createFullyFledgedObject($objectname, $keyPrefix = "", $save = true, $seed = 1) {
         if ($keyPrefix == null) {
             $keyPrefix = "";
         }
-        $object = new Object_Unittest();
+        $classname = 'Object_'. $objectname;
+        $object = new $classname();
         $object->setOmitMandatoryCheck(true);
         $object->setParentId(1);
         $object->setUserOwner(1);

@@ -29,7 +29,7 @@ class TestSuite_Rest_ClassTest extends Pimcore_Test_Case {
         $object->save();
     }
 
-    public function estGetClass() {
+    public function testGetClass() {
         $object = Pimcore_Test_Helper_Tool::createEmptyObject('UnittestClass');
         $classId = $object->getClassId();
 
