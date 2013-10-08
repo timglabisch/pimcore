@@ -64,7 +64,7 @@ class Zend_Controller_Front
      *
      * @var Zend_Controller_Front
      */
-    protected static $_instance = null;
+    public static $_instance = null;
 
     /**
      * Array of invocation parameters to use when instantiating action

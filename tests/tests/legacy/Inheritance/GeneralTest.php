@@ -53,6 +53,8 @@ class TestSuite_Inheritance_GeneralTest extends Pimcore_Test_Case {
     public function testInheritance() {
         // According to the bootstrap file en and de are valid website languages
 
+        $this->markTestIncomplete();
+
         $one = new Object_Inheritance();
         $one->setKey("one");
         $one->setParentId(1);

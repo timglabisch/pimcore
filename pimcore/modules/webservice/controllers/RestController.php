@@ -221,6 +221,8 @@ class Webservice_RestController extends Pimcore_Controller_Action_Webservice {
                 return;
 
             }
+        } catch (Pimcore_Test_Exception_AvoidExit $e) {
+            throw $e;
         } catch (Exception $e) {
             Logger::error($e);
             $this->encoder->encode(array("success" => false, "msg" => (string) $e));
@@ -246,6 +248,9 @@ class Webservice_RestController extends Pimcore_Controller_Action_Webservice {
                 $this->encoder->encode(array("success" => true, "data" => $class));
                 return;
             }
+        }
+        catch (Pimcore_Test_Exception_AvoidExit $e) {
+                throw $e;
         } catch (Exception $e) {
             $this->encoder->encode(array("success" => false, "message" => (string) $e));
             Logger::error($e);
@@ -271,6 +276,8 @@ class Webservice_RestController extends Pimcore_Controller_Action_Webservice {
                 $this->encoder->encode(array("success" => true, "data" => $class));
                 return;
             }
+        } catch (Pimcore_Test_Exception_AvoidExit $e) {
+            throw $e;
         } catch (Exception $e) {
             Logger::error($e);
             $this->encoder->encode(array("success" => false, "msg" => (string) $e));
@@ -290,6 +297,8 @@ class Webservice_RestController extends Pimcore_Controller_Action_Webservice {
                 $this->encoder->encode(array("success" => true, "data" => $config->getForWebserviceExport()));
                 return;
             }
+        } catch (Pimcore_Test_Exception_AvoidExit $e) {
+            throw $e;
         } catch (Exception $e) {
             Logger::error($e);
             $this->encoder->encode(array("success" => false, "msg" => (string) $e));
@@ -347,6 +356,8 @@ class Webservice_RestController extends Pimcore_Controller_Action_Webservice {
         try {
             $fc = Object_Fieldcollection_Definition::getByKey($this->getParam("id"));
             $this->_helper->json(array("success" => true, "data" => $fc));
+        } catch (Pimcore_Test_Exception_AvoidExit $e) {
+            throw $e;
         } catch (Exception $e) {
             Logger::error($e);
             $this->encoder->encode(array("success" => false, "msg" => (string) $e));
@@ -366,6 +377,8 @@ class Webservice_RestController extends Pimcore_Controller_Action_Webservice {
             $object = $this->service->getuser();
             $this->encoder->encode(array("success" => true, "data" => $object));
 
+        } catch (Pimcore_Test_Exception_AvoidExit $e) {
+            throw $e;
         } catch (Exception $e) {
             Logger::error($e);
         }
@@ -552,6 +565,8 @@ class Webservice_RestController extends Pimcore_Controller_Action_Webservice {
                 $definition["keys"] = $keys;
                 $this->encoder->encode(array("success" => true, "data" => $definition));
             }
+        } catch (Pimcore_Test_Exception_AvoidExit $e) {
+            throw $e;
         } catch (Exception $e) {
             $this->encoder->encode(array("success" => false, "msg" => (string) $e));
         }
@@ -667,7 +682,8 @@ class Webservice_RestController extends Pimcore_Controller_Action_Webservice {
                 return;
 
             }
-
+        } catch (Pimcore_Test_Exception_AvoidExit $e) {
+            throw $e;
         } catch (Exception $e) {
             $this->encoder->encode(array("success" => false, "msg" => (string) $e));
         }
@@ -894,6 +910,8 @@ class Webservice_RestController extends Pimcore_Controller_Action_Webservice {
                 }
             }
             $this->encoder->encode(array("success" => true, "data" => $resultData));
+        } catch (Pimcore_Test_Exception_AvoidExit $e) {
+            throw $e;
         } catch (Exception $e) {
             $this->encoder->encode(array("success" => false, "msg" => $e->getMessage()));
         }
@@ -1078,6 +1096,8 @@ class Webservice_RestController extends Pimcore_Controller_Action_Webservice {
             $params = $this->getRequest()->getQuery();
             $result = $this->service->getTranslations($params['type'],$params);
             $this->encoder->encode(array("success" => true, "data" => $result));
+        } catch (Pimcore_Test_Exception_AvoidExit $e) {
+            throw $e;
         } catch (Exception $e) {
             Logger::error($e);
             $this->encoder->encode(array("success" => false, "msg" => (string) $e));

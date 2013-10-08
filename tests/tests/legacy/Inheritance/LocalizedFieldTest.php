@@ -50,6 +50,8 @@ class TestSuite_Inheritance_LocalizedFieldTest extends Pimcore_Test_Case {
     public function testInheritanceLocalizedField() {
         // According to the bootstrap file en and de are valid website languages
 
+        $this->markTestIncomplete();
+
         $one = new Object_InheritanceLocalizedField();
         $one->setKey("one");
         $one->setParentId(1);

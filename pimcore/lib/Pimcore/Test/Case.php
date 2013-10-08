@@ -17,6 +17,7 @@
 class Pimcore_Test_Case extends \PHPUnit_Framework_TestCase {
 
     protected static $copyOfZendRegistry;
+    protected static $copyOfRouter;
     protected static $user = null;
     protected static $restclient = null;
 
@@ -30,12 +31,21 @@ class Pimcore_Test_Case extends \PHPUnit_Framework_TestCase {
         }
 
 
+        if(!static::$copyOfRouter) {
+            static::$copyOfRouter = serialize(Zend_Controller_Front::getInstance()->getRouter());
+        } else {
+            Zend_Controller_Front::getInstance()->setRouter(unserialize(static::$copyOfRouter));
+        }
+
+
+
         Pimcore_Model_Cache::clearAll();
 
         Pimcore_Resource::get()->reset();
 
         $filesystemSandbox = new Pimcore_Test_Sandbox_Filesystem();
         $filesystemSandbox->reset();
+
 
         static::$user = null;
         static::$restclient = null;

@@ -193,6 +193,8 @@ class Zend_Controller_Router_Route extends Zend_Controller_Router_Route_Abstract
                 }
             }
         }
+
+        $a = 0;
     }
 
     /**

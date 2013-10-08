@@ -20,8 +20,6 @@ class TestSuite_Datatypes_KeyValueTest extends Pimcore_Test_Case {
         $object->setLayoutDefinitions($objectlayout);
         $object->setUserOwner(1);
         $object->save();
-
-
     }
 
     public function testUninitialized() {
