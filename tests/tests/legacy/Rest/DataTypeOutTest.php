@@ -1,214 +1,220 @@
 <?php
-/**
- * Created by IntelliJ IDEA.
- * User: Michi
- * Date: 11.11.2010
- * Time: 10:35:07
- */
 
 
-class TestSuite_Rest_DataTypeTestOut extends Test_BaseRest {
+class TestSuite_Rest_DataTypeOutTest extends Pimcore_Test_Case {
 
-    static $seed;
-
-    static $localObject;
-
-    static $restObject;
-
-    public static function setUpBeforeClass() {
-        print("### setUpBeforeClass " . __FILE__);
-        // every single rest test assumes a clean database
-        Test_Tool::cleanUp();
-
-        // this will create a couple of objects which can be used for references
-        Test_Tool::createEmptyObjects();
-
-        self::$seed = 1;
-        self::$localObject = Test_Tool::createFullyFledgedObject("local", true, self::$seed);
-        self::$restObject = self::getRestClient()->getObjectById(self::$localObject->getId());
-    }
+    protected $o;
 
     public function setUp() {
+
         parent::setUp();
 
+
+        $object = Object_Class::create();
+        $object->setName('DataTypeOut');
+
+        $objectlayout = new Object_Class_Layout();
+
+
+        $fields = array(
+            array('field' => "input"),
+            array('field' => "numeric"),
+            array('field' => "textarea"),
+            array('field' => "slider"),
+            array('field' => "href"),
+            array('field' => "multihref"),
+            array('field' => "image"),
+            array('field' => "hotspotimage"),
+            #   array('field' => "language"),
+            array('field' => "country"),
+            array('field' => "date"),
+            array('field' => "datetime"),
+            array('field' => "time"),
+            array('field' => "select"),
+            array('field' => "multiselect"),
+            array('field' => "user"),
+            array('field' => "checkbox"),
+            array('field' => "wysiwyg"),
+            array('field' => "password"),
+            array('field' => "countrymultiselect"),
+            array('field' => "table"),
+            array('field' => "link"),
+            # array('field' => "structuredTable"),
+            array('field' => "objects"),
+            array('field' => "objectsMetadata"),
+            array('field' => "input"),
+            array('field' => "objects"),
+            array('field' => "keyValue"),
+            # array('field' => "objectbricks")
+        );
+
+        foreach($fields as $v) {
+            $class = 'Object_Class_Data_'. ucfirst($v['field']);
+            $data = new $class;
+            $data->setTitle($v['field']);
+            $data->setName($v['field']);
+            $objectlayout->addChild($data);
+        }
+
+
+
+        $object->setLayoutDefinitions($objectlayout);
+        $object->setUserOwner(1);
+        $object->save();
+
+
+        $object = new Object_DataTypeOut();
+        $object->setOmitMandatoryCheck(true);
+        $object->setParentId(1);
+        $object->setUserOwner(1);
+        $object->setUserModification(1);
+        $object->setCreationDate(time());
+        $object->setKey('unittest');
+
+
+        $object->setInput('input!');
+        $object->setNumeric(124);
+        $object->setTextarea('textarea!');
+        $object->setSlider(5);
+        $object->save();
+
+        $this->o = self::getRestClient()->getObjectById($object->getId());
     }
 
     public function testInput() {
-        $this->printTestName();
-        $this->assertTrue(Test_Data::assertInput(self::$restObject, "input", self::$seed));
+        $this->assertEquals($this->o->getInput(), 'input!');
     }
 
-    public function testNumber() {
-        $this->printTestName();
-        $this->assertTrue(Test_Data::assertNumber(self::$restObject, "number", self::$seed));
+    public function testNumeric() {
+        $this->assertEquals($this->o->getNumeric(), 124);
     }
 
     public function testTextarea() {
-        $this->printTestName();
-        $this->assertTrue(Test_Data::assertTextarea(self::$restObject, "textarea", self::$seed));
+        $this->assertEquals($this->o->getTextarea(), 'textarea!');
     }
 
     public function testSlider() {
-        $this->printTestName();
-        $this->assertTrue(Test_Data::assertSlider(self::$restObject, "slider", self::$seed));
+        $this->assertEquals($this->o->getSlider(), 5);
     }
 
     public function testHref() {
-        $this->printTestName();
-        $this->assertTrue(Test_Data::assertHref(self::$restObject, "href", self::$seed));
+        $this->markTestIncomplete();
     }
 
     public function testMultiHref() {
-        $this->printTestName();
-        $this->assertTrue(Test_Data::assertMultihref(self::$restObject, "multihref", self::$seed));
+        $this->markTestIncomplete();
     }
 
     public function testImage() {
-        $this->printTestName();
-        $this->assertNotNull(self::$localObject->getImage());
-        $this->assertNotNull(self::$restObject->getImage());
-        $this->assertTrue(Test_Data::assertImage(self::$restObject, "image", self::$seed));
+        $this->markTestIncomplete();
     }
 
     public function testHotspotImage() {
-        $this->printTestName();
-        $this->assertNotNull(self::$localObject->getHotspotImage());
-        $this->assertNotNull(self::$restObject->getHotspotImage());
-        $this->assertTrue(Test_Data::assertHotspotImage(self::$restObject, "hotspotimage", self::$seed));
+        $this->markTestIncomplete();
     }
 
     public function testLanguage() {
-        $this->printTestName();
-        $this->assertTrue(Test_Data::assertLanguage(self::$restObject, "languagex", self::$seed));
+        $this->markTestIncomplete();
     }
 
     public function testCountry() {
-        $this->printTestName();
-        $this->assertNotNull(self::$restObject->getCountry());
-        $this->assertTrue(Test_Data::assertCountry(self::$restObject, "country", self::$seed));
+        $this->markTestIncomplete();
     }
 
     public function testDate() {
-        $this->printTestName();
-        $this->assertTrue(Test_Data::assertDate(self::$restObject, "date", self::$seed));
+        $this->markTestIncomplete();
     }
 
     public function testDateTime() {
-        $this->printTestName();
-        $this->assertTrue(Test_Data::assertDate(self::$restObject, "datetime", self::$seed));
+        $this->markTestIncomplete();
     }
 
-
     public function testSelect() {
-        $this->printTestName();
-        $this->assertTrue(Test_Data::assertSelect(self::$restObject, "select", self::$seed));
+        $this->markTestIncomplete();
     }
 
     public function testMultiSelect() {
-        $this->printTestName();
-        $this->assertTrue(Test_Data::assertMultiSelect(self::$restObject, "multiselect", self::$seed));
+        $this->markTestIncomplete();
     }
 
     public function testUser() {
-        $this->printTestName();
-        $this->assertTrue(Test_Data::assertUser(self::$restObject, "user", self::$seed));
+        $this->markTestIncomplete();
     }
 
     public function testCheckbox() {
-        $this->printTestName();
-        $this->assertTrue(Test_Data::assertCheckbox(self::$restObject, "checkbox", self::$seed));
+        $this->markTestIncomplete();
     }
 
     public function testTime() {
-        $this->printTestName();
-        $this->assertTrue(Test_Data::assertTime(self::$restObject, "time", self::$seed));
+        $this->markTestIncomplete();
     }
 
     public function testWysiwyg() {
-        $this->printTestName();
-        $this->assertTrue(Test_Data::assertWysiwyg(self::$restObject, "wysiwyg", self::$seed));
+        $this->markTestIncomplete();
     }
 
     public function testPassword() {
-        $this->printTestName();
-        $this->assertTrue(Test_Data::assertPassword(self::$restObject, "password", self::$seed));
+        $this->markTestIncomplete();
     }
 
     public function testCountryMultiSelect() {
-        $this->printTestName();
-        $this->assertTrue(Test_Data::assertCountryMultiSelect(self::$restObject, "countries", self::$seed));
+        $this->markTestIncomplete();
     }
 
     public function testLanguageMultiSelect() {
-        $this->printTestName();
-        $this->assertTrue(Test_Data::assertCountryMultiSelect(self::$restObject, "languages", self::$seed));
+        $this->markTestIncomplete();
     }
 
     public function testGeopoint() {
-        $this->printTestName();
-        $this->assertTrue(Test_Data::assertGeopoint(self::$restObject, "point", self::$seed));
+        $this->markTestIncomplete();
     }
 
     public function testGeobounds() {
-        $this->printTestName();
-        $this->assertTrue(Test_Data::assertGeobounds(self::$restObject, "bounds", self::$localObject, self::$seed));
+        $this->markTestIncomplete();
     }
 
     public function testGeopolygon() {
-        $this->printTestName();
-        $this->assertTrue(Test_Data::assertGeopolygon(self::$restObject, "poly", self::$localObject, self::$seed));
+        $this->markTestIncomplete();
     }
 
     public function testTable() {
-        $this->printTestName();
-        $this->assertTrue(Test_Data::assertTable(self::$restObject, "table", self::$localObject, self::$seed));
+        $this->markTestIncomplete();
     }
 
     public function testLink() {
-        $this->printTestName();
-        $this->assertTrue(Test_Data::assertLink(self::$restObject, "link", self::$localObject, self::$seed));
+        $this->markTestIncomplete();
     }
 
     public function testStructuredTable() {
-        $this->printTestName();
-        $this->assertTrue(Test_Data::assertStructuredTable(self::$restObject, "structuredtable", self::$localObject, self::$seed));
+        $this->markTestIncomplete();
     }
 
     public function testObjects() {
-        $this->printTestName();
-        $this->assertTrue(Test_Data::assertObjects(self::$restObject, "objects", self::$localObject, self::$seed));
+        $this->markTestIncomplete();
     }
 
     public function testObjectsWithMetadata() {
-        $this->printTestName();
-        $this->assertTrue(Test_Data::assertObjectsWithmetadata(self::$restObject, "objectswithmetadata", self::$localObject, self::$seed));
+        $this->markTestIncomplete();
     }
 
     public function testLInput() {
-        $this->printTestName();
-        $this->assertTrue(Test_Data::assertInput(self::$restObject, "linput", self::$seed, "en"));
-        $this->assertTrue(Test_Data::assertInput(self::$restObject, "linput", self::$seed, "de"));
+        $this->markTestIncomplete();
     }
 
     public function testLObjects() {
-        $this->printTestName();
-        $this->assertTrue(Test_Data::assertObjects(self::$restObject, "lobjects", self::$restObject, self::$seed, "en"));
-        $this->assertTrue(Test_Data::assertObjects(self::$restObject, "lobjects", self::$restObject, self::$seed, "de"));
+        $this->markTestIncomplete();
     }
 
     public function testKeyValue() {
-        $this->printTestName();
-        $this->assertTrue(Test_Data::assertKeyValue(self::$restObject, "keyvaluepairs", self::$seed));
+        $this->markTestIncomplete();
     }
 
     public function testBricks() {
-        $this->printTestName();
-        $this->assertTrue(Test_Data::assertBricks(self::$restObject, "mybricks", self::$seed));
+        $this->markTestIncomplete();
     }
 
     public function testFieldCollection() {
-        $this->printTestName();
-        $this->assertTrue(Test_Data::assertFieldCollection(self::$restObject, "myfieldcollection", self::$seed));
+        $this->markTestIncomplete();
     }
 
 }

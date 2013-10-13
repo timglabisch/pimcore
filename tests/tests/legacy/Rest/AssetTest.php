@@ -76,7 +76,7 @@ class TestSuite_Rest_AssetTest extends Pimcore_Test_Case {
         $fitem = Asset::getById($folder->getId());
         $this->assertNull($fitem);
 
-        $response = self::getRestClient()->createAssetFolder($folder);
+        $response = $this->getRestClient()->createAssetFolder($folder);
         $this->assertTrue($response->id > 0, "request wasn't successful");
 
         $id = $response->id;

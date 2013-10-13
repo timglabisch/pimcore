@@ -78,7 +78,8 @@ class Pimcore_Test_Pimcore extends Pimcore {
             $front->dispatch($request, $response);
         } catch(Pimcore_Test_Exception_AvoidExit $e) {
             try {
-                Pimcore_Resource_Mysql::getConnection()->rollBack();
+                # will break some tests ...
+                # Pimcore_Resource_Mysql::getConnection()->commit();
             } catch(\Exception $ie) {
                 $a = $ie;
             }

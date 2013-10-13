@@ -451,9 +451,9 @@ class Pimcore_Test_Helper_Tool
 
         try {
             Pimcore_Test_Helper_Data::fillInput($object, "input", $seed);
-            Pimcore_Test_Helper_Data::fillNumber($object, "number", $seed);
+            Pimcore_Test_Helper_Data::fillNumber($object, "numeric", $seed);
             Pimcore_Test_Helper_Data::fillTextarea($object, "textarea", $seed);
-            Pimcore_Test_Helper_Data::fillSlider($object, "slider", $seed);
+            /*Pimcore_Test_Helper_Data::fillSlider($object, "slider", $seed);
             Pimcore_Test_Helper_Data::fillHref($object, "href", $seed);
             Pimcore_Test_Helper_Data::fillMultihref($object, "multihref", $seed);
             Pimcore_Test_Helper_Data::fillImage($object, "image", $seed);
@@ -485,7 +485,7 @@ class Pimcore_Test_Helper_Tool
             Pimcore_Test_Helper_Data::fillObjects($object, "lobjects", $seed, "en");
             Pimcore_Test_Helper_Data::fillKeyValue($object, "keyvaluepairs", $seed);
             Pimcore_Test_Helper_Data::fillBricks($object, "mybricks", $seed);
-            Pimcore_Test_Helper_Data::fillFieldCollection($object, "myfieldcollection", $seed);
+            Pimcore_Test_Helper_Data::fillFieldCollection($object, "myfieldcollection", $seed); */
         } catch (Exception $e) {
             print($e . "\n");
 

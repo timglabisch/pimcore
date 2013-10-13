@@ -50,7 +50,7 @@ class Pimcore_Test_Case extends \PHPUnit_Framework_TestCase {
         static::$user = null;
         static::$restclient = null;
 
-        Pimcore_Model_Cache::disable();
+        #Pimcore_Model_Cache::disable();
     }
 
     function createAdminUser() {
@@ -60,6 +60,7 @@ class Pimcore_Test_Case extends \PHPUnit_Framework_TestCase {
 
         $user = new User();
         $user->setAdmin(true);
+        $user->setName('Unittest');
         $user->setFirstname('Unittest');
         $user->setLastname('Unittest');
         $user->setPassword('APIKEY');

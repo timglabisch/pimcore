@@ -1,13 +1,6 @@
 <?php
-/**
- * Created by IntelliJ IDEA.
- * User: Michi
- * Date: 11.11.2010
- * Time: 10:35:07
- */
 
-
-class TestSuite_Rest_DataTypeTest extends Pimcore_Test_Case {
+class TestSuite_Rest_DataTypeInTest extends Pimcore_Test_Case {
 
     static $seed;
 
