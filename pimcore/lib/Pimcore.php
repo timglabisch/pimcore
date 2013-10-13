@@ -31,7 +31,7 @@ class Pimcore {
      */
     public static function run() {
 
-        static::setSystemRequirements();
+c        static::setSystemRequirements();
 
         // enable the output-buffer, why? see in static::outputBufferStart()
         static::outputBufferStart();

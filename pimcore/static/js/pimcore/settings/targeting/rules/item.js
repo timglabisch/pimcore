@@ -206,6 +206,15 @@ pimcore.settings.targeting.rules.item = Class.create({
                 width: 400,
                 height: 100,
                 value: this.data.description
+            }, {
+                name: "scope",
+                fieldLabel: t("scope"),
+                xtype: "combo",
+                width: 200,
+                value: this.data["scope"],
+                mode: "local",
+                triggerAction: "all",
+                store: [["user", t("user")],["session", t("session")], ["hit", t("hit")]]
             }]
         });
 
