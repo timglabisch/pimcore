@@ -136,17 +136,6 @@ class Pimcore_Test_Helper_Tool
                 $id = uniqid();
             }
 
-            $myFile = $asset1->getFilename();
-            $fh = fopen($myFile, 'w');
-            fwrite($fh, $a1Hash);
-            fclose($fh);
-
-            $myFile = $asset2->getFilename();
-            $fh = fopen($myFile, 'w');
-            fwrite($fh, $a2Hash);
-            fclose($fh);
-
-
             return $a1Hash === $a2Hash ? true : false;
 
         } else return false;
@@ -549,6 +538,7 @@ class Pimcore_Test_Helper_Tool
         $properties = array($property);
         $asset->setProperties($properties);
         $asset->setFilename($keyPrefix . uniqid() . rand(10, 99) . ".jpg");
+        $asset->setPath(PIMCORE_WEBSITE_VAR);
         if ($save) {
             $asset->save();
         }
