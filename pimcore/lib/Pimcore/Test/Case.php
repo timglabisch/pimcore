@@ -49,6 +49,8 @@ class Pimcore_Test_Case extends \PHPUnit_Framework_TestCase {
 
         static::$user = null;
         static::$restclient = null;
+
+        Pimcore_Model_Cache::disable();
     }
 
     function createAdminUser() {

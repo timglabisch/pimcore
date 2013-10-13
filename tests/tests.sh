@@ -1,2 +1,2 @@
 clear
-php ../vendor/bin/phpunit --bootstrap bootstrap.php tests/
+php ../vendor/bin/phpunit --bootstrap bootstrap.php tests/legacy/Rest/DataTypeTest.php
