@@ -6,7 +6,7 @@ class TestSuite_Rest_AssetTest extends Pimcore_Test_Case {
 
     public function testCreateAssetFile() {
 
-        $originalContent = file_get_contents(__DIR__ . "/../../fixtures/assets/images/image5.jpg");
+        $originalContent = file_get_contents(__DIR__ . "/../../../fixtures/assets/images/image5.jpg");
 
         $this->assertTrue(strlen($originalContent) > 0);
 
@@ -51,7 +51,7 @@ class TestSuite_Rest_AssetTest extends Pimcore_Test_Case {
 
     public function testDelete() {
 
-        $originalContent = file_get_contents(__DIR__ . "/../../fixtures/assets/images/image5.jpg");
+        $originalContent = file_get_contents(__DIR__ . "/../../../fixtures/assets/images/image5.jpg");
         $savedAsset = Pimcore_Test_Helper_Tool::createImageAsset("", $originalContent, true);
 
         $savedAsset = Asset::getById($savedAsset->getId());
@@ -70,7 +70,7 @@ class TestSuite_Rest_AssetTest extends Pimcore_Test_Case {
     public function testFolder() {
 
         // create folder but don't save it
-        $folder = Pimcore_Test_Helper_Tool::createImageAsset("myfolder", file_get_contents(__DIR__ . "/../../fixtures/assets/images/image5.jpg"), false);
+        $folder = Pimcore_Test_Helper_Tool::createImageAsset("myfolder", file_get_contents(__DIR__ . "/../../../fixtures/assets/images/image5.jpg"), false);
         $folder->setType("folder");
 
         $fitem = Asset::getById($folder->getId());
