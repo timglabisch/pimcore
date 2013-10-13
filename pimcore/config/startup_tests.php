@@ -14,6 +14,7 @@
  */
 
 // some general pimcore definition overwrites
+define("PIMCORE_TEST", true);
 define("PIMCORE_ADMIN", true);
 define("PIMCORE_DEBUG", true);
 define("PIMCORE_DEVMODE", true);

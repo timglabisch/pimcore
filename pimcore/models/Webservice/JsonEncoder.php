@@ -27,6 +27,10 @@ class Webservice_JsonEncoder {
             $response->setHeader('Content-Type', 'application/json', true);
             $response->setBody($data);
             $response->sendResponse();
+
+            if(defined('PIMCORE_TEST') && PIMCORE_TEST)
+                throw new \Pimcore_Test_Exception_AvoidExit($response);
+
             exit;
         }
     }
