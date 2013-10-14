@@ -41,9 +41,9 @@
     <adapter>Pdo_Mysql</adapter>
     <params>
       <host>localhost</host>
-      <username>root</username>
-      <password>dev</password>
-      <dbname>pimcore_2</dbname>
+      <username>travis</username>
+      <password></password>
+      <dbname>pimcore</dbname>
       <port>3306</port>
     </params>
   </database>

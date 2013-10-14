@@ -3,6 +3,10 @@ language: php
 branches:
   only:
     - rewrite_unittests
+
+services:
+  - mysql
+
 php:
   - 5.3.3
   - 5.3
