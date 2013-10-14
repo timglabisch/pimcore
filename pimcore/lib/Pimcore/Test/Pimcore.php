@@ -27,7 +27,7 @@ class Pimcore_Test_Pimcore extends Pimcore {
 
         static::getSandboxFilesystem()->reset();
 
-        $config = new Zend_Config_Xml(PIMCORE_CONFIGURATION_SYSTEM, null, true);
+        $config = new Zend_Config_Xml(PIMCORE_TEST_CONFIGURATION_SYSTEM, null, true);
         $config->general->debug = 1;
         $config->database->params->adapterNamespace = 'Pimcore_Test_Sandbox_Db_Adapter';
         Pimcore_Config::setSystemConfig($config);

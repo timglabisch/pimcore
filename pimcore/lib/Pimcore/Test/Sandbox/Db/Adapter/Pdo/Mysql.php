@@ -31,13 +31,30 @@ class Pimcore_Test_Sandbox_Db_Adapter_Pdo_Mysql extends \Zend_Db_Adapter_Pdo_Mys
     }
 
 
+
     public function reset() {
         $db = new mysqli($this->configToReset["host"], $this->configToReset["username"], $this->configToReset["password"], null, (int)$this->configToReset["port"]);
-        $db->query("SET NAMES utf8");
+        assert($db->query("SET NAMES utf8"));
 
-        $db->query("DROP database IF EXISTS " . $this->configToReset["dbname"] . ";");
-        $db->query("CREATE DATABASE " . $this->configToReset["dbname"] . " charset=utf8");
+        assert($db->query("DROP database IF EXISTS " . $this->configToReset["dbname"] . ";"));
+        assert($db->query("CREATE DATABASE " . $this->configToReset["dbname"] . " charset=utf8"));
+        assert($db->query("USE " . $this->configToReset["dbname"]));
 
+        if(!defined(PIMCORE_TEST_SQL) && !PIMCORE_TEST_SQL)
+            $this->copyTables($db);
+        else {
+            if ($db->multi_query(file_get_contents(PIMCORE_TEST_SQL)))
+                while ($db->next_result());
+        }
+
+        $db->close();
+    }
+
+    /**
+     * @param $db
+     */
+    public function copyTables($db)
+    {
         $statementTablesToCopy = $db->query('
             SELECT TABLES.TABLE_NAME, TABLES.TABLE_TYPE, REPLACE(VIEWS.VIEW_DEFINITION, "`' . $this->configToReset['orig_dbname'] . '`.", "") AS VIEW_DEFINITION FROM
             INFORMATION_SCHEMA.TABLES
@@ -48,10 +65,8 @@ class Pimcore_Test_Sandbox_Db_Adapter_Pdo_Mysql extends \Zend_Db_Adapter_Pdo_Mys
         ');
 
         while ($tablesToCopy = $statementTablesToCopy->fetch_array()) {
-            $db->query($q = 'CREATE TABLE `' . $this->configToReset["dbname"] . '`.`' . $tablesToCopy["TABLE_NAME"] . '` LIKE `' . $this->configToReset["orig_dbname"] . '`.`' . $tablesToCopy["TABLE_NAME"] . '`'); // LIMIT 0');
-            $db->query($q = 'INSERT `' . $this->configToReset["dbname"] . '`.`' . $tablesToCopy["TABLE_NAME"] . '` SELECT * FROM `' . $this->configToReset["orig_dbname"] . '`.`' . $tablesToCopy["TABLE_NAME"] . '`'); // LIMIT 0');
+            assert($db->query($q = 'CREATE TABLE `' . $this->configToReset["dbname"] . '`.`' . $tablesToCopy["TABLE_NAME"] . '` LIKE `' . $this->configToReset["orig_dbname"] . '`.`' . $tablesToCopy["TABLE_NAME"] . '`')); // LIMIT 0');
+            assert($db->query($q = 'INSERT `' . $this->configToReset["dbname"] . '`.`' . $tablesToCopy["TABLE_NAME"] . '` SELECT * FROM `' . $this->configToReset["orig_dbname"] . '`.`' . $tablesToCopy["TABLE_NAME"] . '`')); // LIMIT 0');
         }
-
-        $db->close();
     }
 }

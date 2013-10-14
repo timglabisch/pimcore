@@ -21,6 +21,15 @@ class TestSuite_Rest_ObjectTest extends Pimcore_Test_Case {
         $object->setLayoutDefinitions($objectlayout);
         $object->setUserOwner(1);
         $object->save();
+
+
+        if(!Object_Folder::getByPath('/')) {
+            $rootFolder = new Object_Folder();
+            $rootFolder->setId(1);
+            $rootFolder->setPath('/');
+            $rootFolder->setKey('');
+            $rootFolder->save();
+        }
     }
 
     /**

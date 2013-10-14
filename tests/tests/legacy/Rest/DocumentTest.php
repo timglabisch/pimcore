@@ -2,6 +2,17 @@
 
 class TestSuite_Rest_DocumentTest extends Pimcore_Test_Case {
 
+    public function setUp() {
+        parent::setUp();
+
+        if(!Document_Folder::getByPath('/')) {
+            $rootFolder = new Document_Folder();
+            $rootFolder->setId(1);
+            $rootFolder->setPath('/');
+            $rootFolder->setKey('');
+            $rootFolder->save();
+        }
+    }
 
     public function testCreate() {
         $this->assertEquals(1, Pimcore_Test_Helper_Tool::getDocoumentCount());

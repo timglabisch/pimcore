@@ -13,6 +13,8 @@
  * @license    http://www.pimcore.org/license     New BSD License
  */
 
+#if(!defined("PIMCORE_TEST_SQL")) define("PIMCORE_TEST_SQL", __DIR__.'/../pimcore/modules/install/mysql/install.sql');
+
 require __DIR__.'/../pimcore/config/startup_tests.php';
 
 # for debugging uncomment:

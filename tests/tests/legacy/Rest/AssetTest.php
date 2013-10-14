@@ -3,6 +3,18 @@
 
 class TestSuite_Rest_AssetTest extends Pimcore_Test_Case {
 
+    public function setUp() {
+        parent::setUp();
+
+        if(!Asset_Folder::getByPath('/')) {
+            $rootFolder = new Asset_Folder();
+            $rootFolder->setId(1);
+            $rootFolder->setPath('/');
+            $rootFolder->setFilename('');
+            $rootFolder->save();
+        }
+    }
+
 
     public function testCreateAssetFile() {
 
