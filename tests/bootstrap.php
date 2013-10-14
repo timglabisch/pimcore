@@ -13,7 +13,10 @@
  * @license    http://www.pimcore.org/license     New BSD License
  */
 
-#if(!defined("PIMCORE_TEST_SQL")) define("PIMCORE_TEST_SQL", __DIR__.'/../pimcore/modules/install/mysql/install.sql');
+if(!defined("PIMCORE_FRONTEND_MODULE")) define("PIMCORE_FRONTEND_MODULE", 'website_demo');
+if(!defined("TESTS_ORIG_WEBSITE_VAR")) define('TESTS_ORIG_WEBSITE_VAR', __DIR__.'/../website_example/var');
+if(!defined("PIMCORE_TEST_SQL")) define("PIMCORE_TEST_SQL", __DIR__.'/../pimcore/modules/install/mysql/install.sql');
+if(!defined("PIMCORE_TEST_CONFIGURATION_SYSTEM")) define("PIMCORE_TEST_CONFIGURATION_SYSTEM", __DIR__.'/config/travisci/system.xml');
 
 require __DIR__.'/../pimcore/config/startup_tests.php';
 

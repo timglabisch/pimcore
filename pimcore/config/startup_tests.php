@@ -18,7 +18,8 @@ if(!defined("PIMCORE_ADMIN")) define("PIMCORE_ADMIN", true);
 if(!defined("PIMCORE_DEBUG")) define("PIMCORE_DEBUG", true);
 if(!defined("PIMCORE_DEVMODE")) define("PIMCORE_DEVMODE", true);
 if(!defined("TESTS_PATH")) define("TESTS_PATH", sys_get_temp_dir() .'/pimcore_unittests/');
-if(!defined("TESTS_ORIG_WEBSITE_VAR")) define("TESTS_ORIG_WEBSITE_VAR", __DIR__.'/../../website/var');
+if(!defined("PIMCORE_FRONTEND_MODULE")) define("PIMCORE_FRONTEND_MODULE", 'website_demo');
+if(!defined("TESTS_ORIG_WEBSITE_VAR")) define("TESTS_ORIG_WEBSITE_VAR", __DIR__.'/../../'.PIMCORE_FRONTEND_MODULE.'/var');
 if(!defined("PIMCORE_WEBSITE_VAR")) define("PIMCORE_WEBSITE_VAR",  TESTS_PATH.'/website/var');
 
 // Test Configuration
