@@ -16,4 +16,4 @@ php:
 before_script:
   - composer install --dev --prefer-source
 
-script: cd ./tests/ && ./tests.sh
+script: cd ./tests/ && php ../vendor/bin/phpunit --bootstrap bootstrap.php tests/
