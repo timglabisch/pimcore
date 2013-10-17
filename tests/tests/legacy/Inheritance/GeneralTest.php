@@ -16,6 +16,7 @@ class TestSuite_Inheritance_GeneralTest extends Pimcore_Test_Case {
 
         $object = Object_Class::create();
         $object->setName('Inheritance');
+        $object->setAllowInherit(true);
 
         $objectlayout = new Object_Class_Layout();
 
@@ -53,8 +54,6 @@ class TestSuite_Inheritance_GeneralTest extends Pimcore_Test_Case {
     public function testInheritance() {
         // According to the bootstrap file en and de are valid website languages
 
-        $this->markTestIncomplete();
-
         $one = new Object_Inheritance();
         $one->setKey("one");
         $one->setParentId(1);
@@ -65,6 +64,7 @@ class TestSuite_Inheritance_GeneralTest extends Pimcore_Test_Case {
         $id1 = $one->getId();
 
         $two = new Object_Inheritance();
+        /* @var $two \Object_Concrete */
         $two->setKey("two");
         $two->setParentId($one->getId());
         $two->setPublished(1);
@@ -83,6 +83,9 @@ class TestSuite_Inheritance_GeneralTest extends Pimcore_Test_Case {
         // null it out
         $two->setNormalInput(null);
         $two->save();
+
+        Zend_Registry::set('object_'.$two->getId(), null);
+
         $two = Object_Abstract::getById($id2);
         $this->assertEquals("parenttext", $two->getNormalInput());
 
