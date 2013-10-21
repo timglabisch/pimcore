@@ -435,7 +435,7 @@ class Webservice_RestController extends Pimcore_Controller_Action_Webservice {
                     $algo = "sha1";
 
                     $thumbnailConfig = $this->getParam("thumbnail");
-                    if ($thumbnailConfig) {
+                    if ($thumbnailConfig && $asset->getType() == "image") {
                         $checksum = $asset->getThumbnail($thumbnailConfig)->getChecksum($algo);
                     } else {
                         $checksum = $asset->getChecksum($algo);
@@ -922,7 +922,7 @@ class Webservice_RestController extends Pimcore_Controller_Action_Webservice {
             }
             $sql = "select " . $col . " from " .$type . "s where " . $col . " IN (" . implode(',', $idList) . ")";
 
-            $result = Pimcore_Resource::get()->query($sql);
+            $result = Pimcore_Resource::get()->fetchAll($sql);
             foreach ($result as $item) {
                 $id = $item[$col];
                 if ($condense) {

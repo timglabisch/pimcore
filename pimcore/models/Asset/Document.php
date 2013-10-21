@@ -26,9 +26,11 @@ class Asset_Document extends Asset {
 
         $this->clearThumbnails();
 
-        if($this->_dataChanged) {
+        if($this->getDataChanged()) {
+            $tmpFile = $this->getTemporaryFile(true);
+
             try {
-                $pageCount = $this->readPageCount();
+                $pageCount = $this->readPageCount($tmpFile);
                 if($pageCount !== null && $pageCount > 0) {
                     $this->setProperty("document_page_count", "text", $pageCount);
                 }
@@ -40,8 +42,12 @@ class Asset_Document extends Asset {
         parent::update();
     }
 
-    protected function readPageCount()  {
+    protected function readPageCount($path = null)  {
         $pageCount = null;
+        if(!$path) {
+            $path = $this->getFileSystemPath();
+        }
+
         if(!Pimcore_Document::isAvailable()) {
             Logger::error("Couldn't create image-thumbnail of document " . $this->getFullPath() . " no document adapter is available");
             return null;
@@ -49,10 +55,10 @@ class Asset_Document extends Asset {
 
         try {
             $converter = Pimcore_Document::getInstance();
-            $converter->load($this->getFileSystemPath());
+            $converter->load($path);
 
             // read from blob here, because in $this->update() (see above) $this->getFileSystemPath() contains the old data
-            $pageCount = $converter->getPageCount($this->getData());
+            $pageCount = $converter->getPageCount();
             return $pageCount;
         } catch (\Exception $e) {
             Logger::error($e);
@@ -102,7 +108,7 @@ class Asset_Document extends Asset {
                 $path = Asset_Image_Thumbnail_Processor::process($this, $thumbnail, $path, $deferred);
             }
 
-            return preg_replace("@^" . PIMCORE_DOCUMENT_ROOT . "@", "", $path);
+            return preg_replace("@^" . preg_quote(PIMCORE_DOCUMENT_ROOT) . "@", "", $path);
         } catch (Exception $e) {
             Logger::error("Couldn't create image-thumbnail of document " . $this->getFullPath());
             Logger::error($e);

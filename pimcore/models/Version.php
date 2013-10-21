@@ -159,10 +159,16 @@ class Version extends Pimcore_Model_Abstract {
             throw new Exception("Cannot save version for element " . $this->getCid() . " with type " . $this->getCtype() . " because the file " . $this->getFilePath() . " is not writeable.");
         } else {
             file_put_contents($this->getFilePath(),$dataString);
-        }
 
-        // only do this in the maintenance job, to improve the speed of mass imports
-        //$this->cleanHistory();
+            // assets are kina special because they can contain massive amount of binary data which isn't serialized, we append it to the data file
+            if($data instanceof Asset && $data->getType() != "folder") {
+                // append binary data to version file
+                $handle = fopen($this->getBinaryFilePath(), "w+");
+                $src = $data->getStream();
+                stream_copy_to_stream($src, $handle);
+                fclose($handle);
+            }
+        }
     }
 
     /**
@@ -196,6 +202,14 @@ class Version extends Pimcore_Model_Abstract {
             $data = Pimcore_Tool_Serialize::unserialize($data);
         }
 
+        if($data instanceof Asset && file_exists($this->getBinaryFilePath())) {
+            $binaryHandle = fopen($this->getBinaryFilePath(), "r+");
+            $data->setStream($binaryHandle);
+        } else if($data instanceof Asset && $data->data) {
+            // this is for backward compatibility
+            $data->setData($data->data);
+        }
+
         $data = Element_Service::renewReferences($data);
         $this->setData($data);
 
@@ -210,6 +224,10 @@ class Version extends Pimcore_Model_Abstract {
      */
     protected function getFilePath() {
         return PIMCORE_VERSION_DIRECTORY . "/" . $this->getCtype() . "/" . $this->getId();
+    }
+
+    protected function getBinaryFilePath() {
+        return $this->getFilePath() . ".bin";
     }
 
     /**

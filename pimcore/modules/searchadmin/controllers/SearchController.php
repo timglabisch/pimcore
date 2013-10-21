@@ -128,7 +128,7 @@ class Searchadmin_SearchController extends Pimcore_Controller_Action_Admin {
         }        
 
         // filtering for objects
-        if ($this->getParam("filter")) {
+        if ($this->getParam("filter") && $this->getParam("class")) {
             $class = Object_Class::getByName($this->getParam("class"));
             $conditionFilters = Object_Service::getFilterCondition($this->getParam("filter"), $class);
             $join = "";
@@ -139,7 +139,7 @@ class Searchadmin_SearchController extends Pimcore_Controller_Action_Admin {
                 $join .= " ON `" . $ob . "`.o_id = `object_" . $class->getId() . "`.o_id";
             }
 
-            $conditionParts[] = "( id IN (SELECT `object_" . $class->getId() . "`.o_id FROM object_" . $class->getId() . $join . " " . $conditionFilters . ") )";
+            $conditionParts[] = "( id IN (SELECT `object_" . $class->getId() . "`.o_id FROM object_" . $class->getId() . $join . " WHERE " . $conditionFilters . ") )";
         }
 
         if (is_array($types) and !empty($types[0])) {

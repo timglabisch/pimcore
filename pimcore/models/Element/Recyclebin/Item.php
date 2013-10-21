@@ -121,18 +121,6 @@ class Element_Recyclebin_Item extends Pimcore_Model_Abstract {
      */
     public function save ($user=null) {
 
-        $loadChildren = true;
-
-        if($this->getElement() instanceof Asset_Folder) {
-            if(is_dir($this->getElement()->getFileSystemPath())) {
-                $size = foldersize($this->getElement()->getFileSystemPath());
-                $limit = filesize2bytes(ini_get("memory_limit") . "B") / 2;
-                if($size > $limit) {
-                    $loadChildren = false; // do not load children, it's simply too big
-                }
-            }
-        }
-
         if($this->getElement() instanceof Element_Interface) {
             $this->setType(Element_Service::getElementType($this->getElement()));
         }
@@ -141,14 +129,11 @@ class Element_Recyclebin_Item extends Pimcore_Model_Abstract {
         $this->setPath($this->getElement()->getFullPath());
         $this->setDate(time());
 
-        if($loadChildren) {
-            $this->loadChilds($this->getElement());
-        }
+        $this->loadChilds($this->getElement());
 
         if($user instanceof User){
             $this->setDeletedby($user->getName());
         }
-
 
         // serialize data
         Element_Service::loadAllFields($this->element);
@@ -162,6 +147,27 @@ class Element_Recyclebin_Item extends Pimcore_Model_Abstract {
         }
         
         file_put_contents($this->getStoreageFile(),$data);
+
+        $saveBinaryData = function ($element, $rec) {
+            // assets are kina special because they can contain massive amount of binary data which isn't serialized, we create separate files for them
+            if($element instanceof Asset) {
+
+                if($element->getType() != "folder") {
+                    $handle = fopen($this->getStorageFileBinary($element), "w+");
+                    $src = $element->getStream();
+                    stream_copy_to_stream($src, $handle);
+                    fclose($handle);
+                }
+
+                $children = $element->getChilds();
+                foreach ($children as $child) {
+                    $rec($child, $rec);
+                }
+            }
+        };
+
+        $saveBinaryData($this->getElement(), $saveBinaryData);
+
         chmod($this->getStoreageFile(), 0766);
     }
 
@@ -170,6 +176,15 @@ class Element_Recyclebin_Item extends Pimcore_Model_Abstract {
      */
     public function delete () {
         unlink($this->getStoreageFile());
+
+        // remove binary files
+        $files = glob(PIMCORE_RECYCLEBIN_DIRECTORY . "/" . $this->getId() . "_*");
+        if(is_array($files)) {
+            foreach ($files as $file) {
+                unlink($file);
+            }
+        }
+
         $this->getResource()->delete();
     }
 
@@ -180,15 +195,7 @@ class Element_Recyclebin_Item extends Pimcore_Model_Abstract {
         
         $this->amount++;
 
-        // not sure anymore why this is needed, but anyway, it doesn't matter here
-        if ($element instanceof Asset) {
-            if(!$element instanceof Asset_Folder) {
-                $element->setData(null);
-            }
-        }
-
         Element_Service::loadAllFields($element);
-
 
         // for all
         $element->getProperties();
@@ -216,6 +223,21 @@ class Element_Recyclebin_Item extends Pimcore_Model_Abstract {
      * @param Element_Interface $element
      */
     public function restoreChilds (Element_Interface $element) {
+
+
+        $restoreBinaryData = function ($element, $rec) {
+            // assets are kina special because they can contain massive amount of binary data which isn't serialized, we create separate files for them
+            if($element instanceof Asset) {
+                $binFile = $this->getStorageFileBinary($element);
+                if(file_exists($binFile)) {
+                    $binaryHandle = fopen($binFile, "r+");
+                    $element->setStream($binaryHandle);
+                }
+            }
+        };
+
+        $restoreBinaryData($element, $restoreBinaryData);
+
         $element->save();
         
         if(method_exists($element,"getChilds")) {
@@ -236,6 +258,10 @@ class Element_Recyclebin_Item extends Pimcore_Model_Abstract {
      */
     public function getStoreageFile () {
         return PIMCORE_RECYCLEBIN_DIRECTORY . "/" . $this->getId() . ".psf";
+    }
+
+    public function getStorageFileBinary($element) {
+        return PIMCORE_RECYCLEBIN_DIRECTORY . "/" . $this->getId() . "_" . Element_Service::getElementType($element) . "-" . $element->getId() . ".bin";
     }
 
     /**

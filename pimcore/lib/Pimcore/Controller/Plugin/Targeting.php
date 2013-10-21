@@ -103,7 +103,8 @@ class Pimcore_Controller_Plugin_Targeting extends Zend_Controller_Plugin_Abstrac
             $targets = array();
             $personas = array();
             $dataPush = array(
-                "personas" => $this->personas
+                "personas" => $this->personas,
+                "method" => strtolower($this->getRequest()->getMethod())
             );
 
             if(count($this->events) > 0) {
@@ -130,7 +131,10 @@ class Pimcore_Controller_Plugin_Targeting extends Zend_Controller_Plugin_Abstrac
                 $personaVariants = array();
                 foreach($this->document->getElements() as $key => $tag) {
                     if(preg_match("/^persona_-([0-9]+)-_/", $key, $matches)) {
-                        $personaVariants[] = (int) $matches[1];
+                        $id = (int) $matches[1];
+                        if(Tool_Targeting_Persona::isIdActive($id)) {
+                            $personaVariants[] = $id;
+                        }
                     }
                 }
 
@@ -142,10 +146,19 @@ class Pimcore_Controller_Plugin_Targeting extends Zend_Controller_Plugin_Abstrac
 
             // no duplicates
             $dataPush["personas"] = array_unique($dataPush["personas"]);
+            $activePersonas = array();
+            foreach ($dataPush["personas"] as $id) {
+                if(Tool_Targeting_Persona::isIdActive($id)) {
+                    $activePersonas[] = $id;
+                }
+            }
+            $dataPush["personas"] = $activePersonas;
+
 
             if($this->document) {
                 // @TODO: cache this
                 $list = new Tool_Targeting_Rule_List();
+                $list->setCondition("active = 1");
 
                 foreach($list->load() as $target) {
 
@@ -161,6 +174,7 @@ class Pimcore_Controller_Plugin_Targeting extends Zend_Controller_Plugin_Abstrac
                 }
 
                 $list = new Tool_Targeting_Persona_List();
+                $list->setCondition("active = 1");
                 foreach($list->load() as $persona) {
                     $personas[] = $persona;
                 }
@@ -173,9 +187,8 @@ class Pimcore_Controller_Plugin_Targeting extends Zend_Controller_Plugin_Abstrac
                 $code .= 'var pimcore = pimcore || {};';
                 $code .= 'pimcore["targeting"] = {};';
                 $code .= 'pimcore["targeting"]["dataPush"] = ' . Zend_Json::encode($dataPush) . ';';
-                $code .= 'pimcore["targeting"]["targets"] = ' . Zend_Json::encode($targets) . ';';
+                $code .= 'pimcore["targeting"]["targetingRules"] = ' . Zend_Json::encode($targets) . ';';
                 $code .= 'pimcore["targeting"]["personas"] = ' . Zend_Json::encode($personas) . ';';
-                $code .= 'pimcore["targeting"]["requestInfo"] = ' . Zend_Json::encode(array("method" => strtolower($this->getRequest()->getMethod()))) . ';';
             $code .= '</script>';
             $code .= '<script type="text/javascript" src="/pimcore/static/js/frontend/targeting.js"></script>';
             $code .= "\n";

@@ -88,11 +88,9 @@ class Asset extends Element_Abstract {
     public $modificationDate;
 
     /**
-     * Contains the whole data of the asset (raw)
-     *
-     * @var mixed
+     * @var resource
      */
-    public $data;
+    public $stream;
 
     /**
      * ID of the owner user
@@ -283,20 +281,42 @@ class Asset extends Element_Abstract {
         // create already the real class for the asset type, this is especially for images, because a system-thumbnail
         // (tree) is generated immediately after creating an image
         $class = "Asset";
-        if(array_key_exists("filename", $data) && array_key_exists("data", $data)) {
-            $tmpFile = PIMCORE_SYSTEM_TEMP_DIRECTORY . "/asset-create-tmp-file-" . uniqid() . "." . Pimcore_File::getFileExtension($data["filename"]);
-            file_put_contents($tmpFile, $data["data"]);
-            $mimeType = Pimcore_Tool_Mime::detect($tmpFile);
-            unlink($tmpFile);
+        if(array_key_exists("filename", $data) && (array_key_exists("data", $data) || array_key_exists("sourcePath", $data) || array_key_exists("stream", $data))) {
+            if(array_key_exists("data", $data) || array_key_exists("stream", $data)) {
+                $tmpFile = PIMCORE_SYSTEM_TEMP_DIRECTORY . "/asset-create-tmp-file-" . uniqid() . "." . Pimcore_File::getFileExtension($data["filename"]);
+                if(array_key_exists("data", $data)) {
+                    file_put_contents($tmpFile, $data["data"]);
+                } else {
+                    $streamMeta = stream_get_meta_data($data["stream"]);
+                    if(file_exists($streamMeta["uri"])) {
+                        // stream is a local file, so we don't have to write a tmp file
+                        $tmpFile = $streamMeta["uri"];
+                    } else {
+                        // write a tmp file because the stream isn't a pointer to the local filesystem
+                        rewind($data["stream"]);
+                        $dest = fopen($tmpFile, "w+");
+                        stream_copy_to_stream($data["stream"], $dest);
+                        fclose($dest);
+                    }
+                }
+                $mimeType = Pimcore_Tool_Mime::detect($tmpFile);
+                unlink($tmpFile);
+            } else {
+                $mimeType = Pimcore_Tool_Mime::detect($data["sourcePath"], $data["filename"]);
+                $data["stream"] = fopen($data["sourcePath"], "r+");
+                unset($data["sourcePath"]);
+            }
+
             $type = self::getTypeFromMimeMapping($mimeType, $data["filename"]);
             $class = "Asset_" . ucfirst($type);
+            if(array_key_exists("type", $data)) {
+                unset($data["type"]);
+            }
         }
 
         $asset = new $class();
         $asset->setParentId($parentId);
-        foreach ($data as $key => $value) {
-            $asset->setValue($key, $value);
-        }
+        $asset->setValues($data);
 
         if($save) {
             $asset->save();
@@ -380,30 +400,6 @@ class Asset extends Element_Abstract {
         return $type;
     }
 
-
-    /**
-     * get the cache tag for the current asset
-     *
-     * @return Dependency
-     */
-    public function getCacheTag() {
-        return "asset_" . $this->getId();
-    }
-
-    /**
-     * Get the cache tags for the asset, resolve all dependencies to tag the cache entries
-     * This is necessary to update the cache if there is a change in an depended object
-     *
-     * @return array
-     */
-    public function getCacheTags($tags = array()) {
-
-        $tags = is_array($tags) ? $tags : array();
-        
-        $tags[$this->getCacheTag()] = $this->getCacheTag();
-        return $tags;
-    }
-
     /**
      * Get full path to the asset on the filesystem
      *
@@ -411,18 +407,6 @@ class Asset extends Element_Abstract {
      */
     public function getFileSystemPath() {
         return PIMCORE_ASSET_DIRECTORY . $this->getFullPath();
-    }
-
-    /**
-     * Load the binary data into the object
-     *
-     * @return void
-     */
-    public function loadData() {
-        if ($this->getType() != "folder" && file_exists($this->getFileSystemPath())) {
-            $this->setData(file_get_contents($this->getFileSystemPath()));
-            $this->_dataChanged = false;
-        }
     }
 
     /**
@@ -438,39 +422,58 @@ class Asset extends Element_Abstract {
             Pimcore_API_Plugin_Broker::getInstance()->preAddAsset($this);
         }
 
-        $this->beginTransaction();
+        // we wrap the save actions in a loop here, so that we can restart the database transactions in the case it fails
+        // if a transaction fails it gets restarted $maxRetries times, then the exception is thrown out
+        // this is especially useful to avoid problems with deadlocks in multi-threaded environments (forked workers, ...)
+        $maxRetries = 5;
+        for($retries=0; $retries<$maxRetries; $retries++) {
 
-        try {
-            if (!Pimcore_Tool::isValidKey($this->getKey()) && $this->getId() != 1) {
-                throw new Exception("invalid filename '".$this->getKey()."' for asset with id [ " . $this->getId() . " ]");
+            $this->beginTransaction();
+
+            try {
+                if (!Pimcore_Tool::isValidKey($this->getKey()) && $this->getId() != 1) {
+                    throw new Exception("invalid filename '".$this->getKey()."' for asset with id [ " . $this->getId() . " ]");
+                }
+
+                $this->correctPath();
+
+                if (!$isUpdate) {
+                    $this->getResource()->create();
+                }
+
+                // get the old path from the database before the update is done
+                $oldPath = null;
+                if ($isUpdate) {
+                    $oldPath = $this->getResource()->getCurrentFullPath();
+                }
+
+                $this->update();
+
+                // if the old path is different from the new path, update all children
+                $updatedChildren = array();
+                if($oldPath && $oldPath != $this->getFullPath()) {
+                    @rename(PIMCORE_ASSET_DIRECTORY . $oldPath, $this->getFileSystemPath());
+                    $updatedChildren = $this->getResource()->updateChildsPaths($oldPath);
+                }
+
+                $this->commit();
+
+                break; // transaction was successfully completed, so we cancel the loop here -> no restart required
+            } catch (Exception $e) {
+                $this->rollBack();
+
+                // we try to start the transaction $maxRetries times again (deadlocks, ...)
+                if($retries < ($maxRetries-1)) {
+                    $run = $retries+1;
+                    $waitTime = 100000; // microseconds
+                    Logger::warn("Unable to finish transaction (" . $run . ". run) because of the following reason '" . $e->getMessage() . "'. --> Retrying in " . $waitTime . " microseconds ... (" . ($run+1) . " of " . $maxRetries . ")");
+
+                    usleep($waitTime); // wait specified time until we restart the transaction
+                } else {
+                    // if the transaction still fail after $maxRetries retries, we throw out the exception
+                    throw $e;
+                }
             }
-
-            $this->correctPath();
-
-            if (!$isUpdate) {
-                $this->getResource()->create();
-            }
-
-            // get the old path from the database before the update is done
-            $oldPath = null;
-            if ($isUpdate) {
-                $oldPath = $this->getResource()->getCurrentFullPath();
-            }
-
-            $this->update();
-
-            // if the old path is different from the new path, update all children
-            $updatedChildren = array();
-            if($oldPath && $oldPath != $this->getFullPath()) {
-                @rename(PIMCORE_ASSET_DIRECTORY . $oldPath, $this->getFileSystemPath());
-                $updatedChildren = $this->getResource()->updateChildsPaths($oldPath);
-            }
-
-            $this->commit();
-        } catch (Exception $e) {
-            $this->rollBack();
-
-            throw $e;
         }
 
         if ($isUpdate) {
@@ -550,35 +553,34 @@ class Asset extends Element_Abstract {
 
         if ($this->getType() != "folder") {
 
-            // get data
-            $this->getData();
+            if($this->getDataChanged()) {
 
-            // remove if exists
-            if (is_file($destinationPath)) {
-                unlink($destinationPath);
+                $src = $this->getStream();
+                $streamMeta = stream_get_meta_data($src);
+                if($destinationPath != $streamMeta["uri"]) {
+                    $dest = fopen($destinationPath, "w+");
+                    stream_copy_to_stream($src, $dest);
+                    fclose($dest);
+                }
+
+                chmod($destinationPath, self::$chmod);
+
+                // check file exists
+                if (!is_file($destinationPath)) {
+                    throw new Exception("couldn't create new asset, file " . $destinationPath . " doesn't exist");
+                }
+
+                // set mime type
+
+                $mimetype = Pimcore_Tool_Mime::detect($this->getFileSystemPath());
+                $this->setMimetype($mimetype);
+
+                // set type
+                $this->setTypeFromMapping();
             }
-
-            file_put_contents($destinationPath, $this->getData());
-            chmod($destinationPath, self::$chmod);
-
-            // check file exists
-            if (!is_file($destinationPath)) {
-                throw new Exception("couldn't create new asset, file " . $destinationPath . " doesn't exist");
-            }
-
-            // set mime type
-
-            $mimetype = Pimcore_Tool_Mime::detect($this->getFileSystemPath());
-            $this->setMimetype($mimetype);
-
-            // set type
-            $this->setTypeFromMapping();
 
             // update scheduled tasks
             $this->saveScheduledTasks();
-
-            // create version
-            $this->getData(); // load data from filesystem to put it into the version
 
             // only create a new version if there is at least 1 allowed
             if(Pimcore_Config::getSystemConfig()->assets->versions->steps
@@ -628,6 +630,8 @@ class Asset extends Element_Abstract {
 
         //set object to registry
         Zend_Registry::set("asset_" . $this->getId(), $this);
+
+        $this->closeStream();
     }
 
     /**
@@ -687,16 +691,6 @@ class Asset extends Element_Abstract {
     }
 
     /**
-     * @return boolean
-     */
-    public function hasNoChilds() {
-        if ($this->hasChilds()) {
-            return false;
-        }
-        return true;
-    }
-
-    /**
      * Returns true if the element is locked
      * @return string
      */
@@ -714,19 +708,6 @@ class Asset extends Element_Abstract {
     }
 
     /**
-     * Returns true if the element is locked
-     * @return bool
-     */
-    public function isLocked(){
-        if($this->getLocked()) {
-            return true;
-        }
-        
-        // check for inherited
-        return $this->getResource()->isLocked();
-    }
-
-    /**
      * @return void
      */
     public function delete() {
@@ -736,6 +717,8 @@ class Asset extends Element_Abstract {
         }
 
         Pimcore_API_Plugin_Broker::getInstance()->preDeleteAsset($this);
+
+        $this->closeStream();
 
         // remove childs
         if ($this->hasChilds()) {
@@ -822,24 +805,6 @@ class Asset extends Element_Abstract {
     }
 
     /**
-     * @return array
-     */
-    public function resolveDependencies() {
-
-        $dependencies = array();
-
-        // check for properties
-        if (method_exists($this, "getProperties")) {
-            $properties = $this->getProperties();
-            foreach ($properties as $property) {
-                $dependencies = array_merge($dependencies, $property->resolveDependencies());
-            }
-        }
-
-        return $dependencies;
-    }
-
-    /**
      * @return integer
      */
     public function getCreationDate() {
@@ -873,7 +838,7 @@ class Asset extends Element_Abstract {
      * @return integer
      */
     public function getModificationDate() {
-        return $this->modificationDate;
+        return (int) $this->modificationDate;
     }
 
     /**
@@ -964,10 +929,12 @@ class Asset extends Element_Abstract {
      * @return mixed
      */
     public function getData() {
-        if (!$this->data) {
-            $this->loadData();
+        $stream = $this->getStream();
+        if($stream) {
+            return stream_get_contents($stream);
         }
-        return $this->data;
+
+        return "";
     }
 
     /**
@@ -975,9 +942,64 @@ class Asset extends Element_Abstract {
      * @return void
      */
     public function setData($data) {
-        $this->data = $data;
-        $this->_dataChanged = true;
+
+        $handle = tmpfile();
+        fwrite($handle, $data);
+        $this->setStream($handle);
+
         return $this;
+    }
+
+
+    /**
+     * @return resource
+     */
+    public function getStream() {
+
+        if($this->stream) {
+            if(!@rewind($this->stream)) {
+                $this->stream = null;
+            }
+        }
+
+        if(!$this->stream && $this->getType() != "folder") {
+            if(file_exists($this->getFileSystemPath())) {
+                $this->stream = fopen($this->getFileSystemPath(), "r+");
+            } else {
+                $this->stream = tmpfile();
+            }
+        }
+
+        return $this->stream;
+    }
+
+    /**
+     * @param $stream
+     */
+    public function setStream($stream) {
+
+        // close existing stream
+        $this->closeStream();
+
+        if(is_resource($stream)) {
+            $this->setDataChanged(true);
+            $this->stream = $stream;
+            rewind($this->stream);
+        } else if(is_null($stream)) {
+            $this->stream = null;
+        }
+
+        return $this;
+    }
+
+    /**
+     *
+     */
+    protected function closeStream() {
+        if(is_resource($this->stream)) {
+            @fclose($this->stream);
+            $this->stream = null;
+        }
     }
 
     /**
@@ -1042,33 +1064,6 @@ class Asset extends Element_Abstract {
     public function setProperties($properties) {
         $this->properties = $properties;
         return $this;
-    }
-
-    /**
-     * Get specific property data or the property object itself ($asContainer=true) by it's name, if the property doesn't exists return null
-     * @param string $name
-     * @param bool $asContainer
-     * @return mixed
-     */
-    public function getProperty($name, $asContainer = false) {
-        $properties = $this->getProperties();
-        if ($this->hasProperty($name)) {
-            if($asContainer) {
-                return $properties[$name];
-            } else {
-                return $properties[$name]->getData();
-            }
-        }
-        return null;
-    }
-
-    /**
-     * @param  $name
-     * @return bool
-     */
-    public function hasProperty ($name) {
-        $properties = $this->getProperties();
-        return array_key_exists($name, $properties);
     }
 
     /**
@@ -1151,13 +1146,21 @@ class Asset extends Element_Abstract {
      *
      * @return string
      */
-    public function getTemporaryFile() {
+    public function getTemporaryFile($fullPath = false) {
 
         $conf = Pimcore_Config::getSystemConfig();
-        $destinationPath = PIMCORE_TEMPORARY_DIRECTORY . "/asset_" . $this->getId() . "_" . md5(microtime());
+        $destinationPath = PIMCORE_TEMPORARY_DIRECTORY . "/asset_" . $this->getId() . "_" . md5(microtime()) . "__" . $this->getFilename();
 
-        file_put_contents($destinationPath, $this->getData());
+        $src = $this->getStream();
+        $dest = fopen($destinationPath, "w+");
+        stream_copy_to_stream($src, $dest);
+        fclose($dest);
+
         chmod($destinationPath, self::$chmod);
+
+        if($fullPath) {
+            return $destinationPath;
+        }
 
         return str_replace(PIMCORE_DOCUMENT_ROOT, "", $destinationPath);
     }
@@ -1228,42 +1231,6 @@ class Asset extends Element_Abstract {
     }
 
     /**
-     * This is used for user-permissions, pass a permission type (eg. list, view, save) an you know if the current user is allowed to perform the requested action
-     *
-     * @param string $type
-     * @return integer
-     */
-    public function isAllowed($type) {
-
-        $currentUser = Pimcore_Tool_Admin::getCurrentUser();
-        //everything is allowed for admin
-        if ($currentUser->isAdmin()) {
-            return true;
-        }
-
-        return $this->getResource()->isAllowed($type, $currentUser);
-    }
-
-    /**
-     * @return array
-     */
-    public function getUserPermissions () {
-
-        $vars = get_class_vars("User_Workspace_Asset");
-        $ignored = array("userId","cid","cpath","resource");
-        $permissions = array();
-
-        foreach ($vars as $name => $defaultValue) {
-            if(!in_array($name, $ignored)) {
-                $permissions[$name] = $this->isAllowed($name);
-            }
-        }
-
-        return $permissions;
-    }
-
-
-    /**
      * @return array
      */
     public function getScheduledTasks() {
@@ -1306,10 +1273,15 @@ class Asset extends Element_Abstract {
      * @param string $format ('GB','MB','KB','B')
      * @return string
      */
-    public function getFileSize($format = 'b', $precision = 2) {
+    public function getFileSize($format = 'noformatting', $precision = 2) {
 
-        $bytes = filesize($this->getFileSystemPath());
-        switch (strtolower($format))
+        $format = strtolower($format);
+        $bytes = 0;
+        if(is_file($this->getFileSystemPath())) {
+            $bytes = filesize($this->getFileSystemPath());
+        }
+
+        switch ($format)
         {
             case 'gb':
                 $size = (($bytes / 1024) / 1024) / 1024;
@@ -1328,6 +1300,10 @@ class Asset extends Element_Abstract {
                 $size = $bytes;
                 $precision = 0;
                 break;
+        }
+
+        if($format == "noformatting") {
+            return $size;
         }
 
         return round($size, $precision) . ' ' . $format;
@@ -1358,13 +1334,6 @@ class Asset extends Element_Abstract {
     }
 
     /**
-     * @return string
-     */
-    public function __toString() {
-        return $this->getFullPath();
-    }
-
-    /**
      *
      */
     public function __sleep() {
@@ -1374,12 +1343,12 @@ class Asset extends Element_Abstract {
 
         if(isset($this->_fulldump)) {
             // this is if we want to make a full dump of the object (eg. for a new version), including childs for recyclebin
-            $blockedVars = array("scheduledTasks", "dependencies", "userPermissions", "hasChilds", "versions", "parent");
+            $blockedVars = array("scheduledTasks", "dependencies", "userPermissions", "hasChilds", "versions", "parent", "stream");
             $finalVars[] = "_fulldump";
             $this->removeInheritedProperties();
         } else {
             // this is if we want to cache the object
-            $blockedVars = array("scheduledTasks", "dependencies", "userPermissions", "hasChilds", "versions", "childs", "properties", "data", "parent");
+            $blockedVars = array("scheduledTasks", "dependencies", "userPermissions", "hasChilds", "versions", "childs", "properties", "stream", "parent");
         }
 
 
@@ -1436,5 +1405,11 @@ class Asset extends Element_Abstract {
         $myProperties = $this->getProperties();
         $inheritedProperties = $this->getResource()->getProperties(true);
         $this->setProperties(array_merge($inheritedProperties, $myProperties));
+    }
+
+    public function __destruct() {
+
+        // close open streams
+        $this->closeStream();
     }
 }
