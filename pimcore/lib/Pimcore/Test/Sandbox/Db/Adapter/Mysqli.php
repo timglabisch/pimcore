@@ -14,8 +14,9 @@
  * @license    http://www.pimcore.org/license     New BSD License
  */
 
-class Pimcore_Test_Sandbox_Db_Adapter_Pdo_Mysql extends \Zend_Db_Adapter_Pdo_Mysql {
+class Pimcore_Test_Sandbox_Db_Adapter_Mysqli extends \Zend_Db_Adapter_Mysqli {
 
+    protected $configToReset = null;
 
     public function __construct($config) {
 
@@ -27,6 +28,8 @@ class Pimcore_Test_Sandbox_Db_Adapter_Pdo_Mysql extends \Zend_Db_Adapter_Pdo_Mys
 
         parent::__construct($config);
     }
+
+
 
     public function reset() {
         $this->resetHelper->reset();
