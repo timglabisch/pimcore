@@ -30,6 +30,10 @@ class Pimcore_Test_Pimcore extends Pimcore {
         $config = new Zend_Config_Xml(PIMCORE_TEST_CONFIGURATION_SYSTEM, null, true);
         $config->general->debug = 1;
         $config->database->params->adapterNamespace = 'Pimcore_Test_Sandbox_Db_Adapter';
+
+        if(isset($_SERVER['PIMCORE_TEST_DRIVER']) && $_SERVER['PIMCORE_TEST_DRIVER'])
+            $config->database->adapter = $_SERVER['PIMCORE_TEST_DRIVER'];
+
         Pimcore_Config::setSystemConfig($config);
 
         parent::run();

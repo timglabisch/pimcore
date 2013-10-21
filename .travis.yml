@@ -13,6 +13,10 @@ php:
   - 5.4
   - 5.5
 
+env:
+  - PIMCORE_TEST_DRIVER=Mysqli
+  - PIMCORE_TEST_DRIVER=Pdo_Mysql
+
 before_script:
   - composer install --dev --prefer-source
 
